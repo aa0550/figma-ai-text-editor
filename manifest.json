@@ -1,0 +1,12 @@
+{
+  "name": "UX Text Editor",
+  "id": "ux-text-editor",
+  "api": "1.0.0",
+  "main": "dist/main.js",
+  "ui": "dist/index.html",
+  "networkAccess": {
+    "allowedDomains": ["https://generativelanguage.googleapis.com"]
+  },
+  "editorType": ["figma"],
+  "permissions": ["currentuser"]
+}

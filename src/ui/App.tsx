@@ -400,10 +400,10 @@ function SegmentedToggle<T extends string>({ value, onChange, options }: {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  root: { display: 'flex', flexDirection: 'column', height: '100vh', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontSize: 13, color: '#111827', background: '#F7F8FA' },
+  root: { display: 'flex', flexDirection: 'column', height: '100vh', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontSize: 13, color: '#111827', background: '#fff' },
   nav: { display: 'flex', gap: 2, margin: '12px 12px 0', padding: 4, background: '#F2F3F5', borderRadius: 12 },
   navBtn: { flex: 1, padding: '8px 4px', border: 'none', background: 'transparent', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#111827', transition: 'background 0.15s, color 0.15s' },
-  navActive: { background: '#fff', color: '#111827', boxShadow: '0 1px 2px rgba(16,24,40,0.08)' },
+  navActive: { background: '#fff', color: '#111827', boxShadow: '0 1px 3px rgba(16,24,40,0.12), 0 1px 2px rgba(16,24,40,0.08)' },
   content: { flex: 1, overflow: 'auto', padding: 12, display: 'flex', flexDirection: 'column' },
   section: { display: 'flex', flexDirection: 'column', padding: 16, gap: 16, height: '100%', boxSizing: 'border-box', background: '#fff', border: '1px solid #E5E7EB', borderRadius: 14, boxShadow: '0 1px 2px rgba(16,24,40,0.04)' },
   label: { fontWeight: 600, fontSize: 12, color: '#374151', marginBottom: 2 },
@@ -418,7 +418,7 @@ const styles: Record<string, React.CSSProperties> = {
   optionsBlock: { display: 'flex', flexDirection: 'column', gap: 6, width: '100%' },
   toggleGroup: { display: 'flex', gap: 2, padding: 4, background: '#F2F3F5', borderRadius: 12 },
   toggleBtn: { flex: 1, padding: '8px 4px', border: 'none', background: 'transparent', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#111827', transition: 'background 0.15s, color 0.15s' },
-  toggleActive: { background: '#fff', color: '#111827', boxShadow: '0 1px 2px rgba(16,24,40,0.08)' },
+  toggleActive: { background: '#fff', color: '#111827', boxShadow: '0 1px 3px rgba(16,24,40,0.12), 0 1px 2px rgba(16,24,40,0.08)' },
   primary: { background: '#4D6BFE', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', cursor: 'pointer', fontWeight: 600, fontSize: 13, boxShadow: '0 1px 2px rgba(16,24,40,0.06)' },
   secondary: { background: '#fff', color: '#374151', border: '1px solid #E5E7EB', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 500 },
   resultsHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },

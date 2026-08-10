@@ -95,6 +95,11 @@ export default function App() {
     updateSuggestion(s.nodeId, { accepted: true, skipped: false })
   }
 
+  function undoAccept(s: Suggestion) {
+    sendMessage({ type: 'apply-change', nodeId: s.nodeId, newText: s.original })
+    updateSuggestion(s.nodeId, { accepted: false })
+  }
+
   function skipChange(s: Suggestion) {
     updateSuggestion(s.nodeId, { skipped: true, accepted: false })
   }
@@ -110,7 +115,7 @@ export default function App() {
     if (accepted.length === 0) return ''
     const lines = accepted.map((s, i) => {
       const link = fileKey
-        ? `https://www.figma.com/design/${fileKey}?node-id=${encodeURIComponent(s.parentId)}`
+        ? `https://www.figma.com/design/${fileKey}?node-id=${s.parentId.replace(/:/g, '-')}`
         : `node-id: ${s.parentId}`
       return `${i + 1}. ${link}\nБыло: ${s.original}\nСтало: ${s.suggested}\n${s.reason}`
     })
@@ -148,6 +153,7 @@ export default function App() {
             suggestions={suggestions}
             onNavigate={(s) => navigate(s.nodeId)}
             onAccept={acceptChange}
+            onUndo={undoAccept}
             onSkip={skipChange}
             onAcceptAll={acceptAll}
           />
@@ -187,7 +193,7 @@ function RulesTab({ rules, apiKey, onRulesChange, onApiKeyChange, scope, onScope
       <div style={styles.fieldGroup}>
         <div style={styles.fieldHeader}>
           <label style={styles.label}>DeepSeek API Key</label>
-          <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noreferrer" style={styles.link}>
+          <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noreferrer" className="key-link" style={styles.link}>
             Получить ключ
           </a>
         </div>
@@ -263,10 +269,11 @@ function ScanTab({ state, progress, error, onStart, onStop, onRetry }: {
   )
 }
 
-function ResultsTab({ suggestions, onNavigate, onAccept, onSkip, onAcceptAll }: {
+function ResultsTab({ suggestions, onNavigate, onAccept, onUndo, onSkip, onAcceptAll }: {
   suggestions: Suggestion[]
   onNavigate: (s: Suggestion) => void
   onAccept: (s: Suggestion) => void
+  onUndo: (s: Suggestion) => void
   onSkip: (s: Suggestion) => void
   onAcceptAll: () => void
 }) {
@@ -275,14 +282,14 @@ function ResultsTab({ suggestions, onNavigate, onAccept, onSkip, onAcceptAll }: 
 
   if (suggestions.length === 0) {
     return <div style={{ ...styles.section, padding: '0 16px', alignItems: 'center', justifyContent: 'center' }}>
-      <p style={{ ...styles.status, fontSize: 12, textAlign: 'center' }}>Нет предложений. Запустите проверку.</p>
+      <p style={{ ...styles.status, fontSize: 13, textAlign: 'center' }}>Нет предложений. Запустите проверку.</p>
     </div>
   }
 
   return (
     <div style={styles.section}>
       <div style={styles.resultsHeader}>
-        <span style={styles.status}>{pending.length} ожидают · {accepted.length} принято</span>
+        <span style={{ ...styles.status, fontWeight: 700 }}>{pending.length} ожидают · {accepted.length} принято</span>
       </div>
       <div style={styles.list}>
         {suggestions.map((s) => (
@@ -291,6 +298,7 @@ function ResultsTab({ suggestions, onNavigate, onAccept, onSkip, onAcceptAll }: 
             suggestion={s}
             onNavigate={() => onNavigate(s)}
             onAccept={() => onAccept(s)}
+            onUndo={() => onUndo(s)}
             onSkip={() => onSkip(s)}
           />
         ))}
@@ -317,8 +325,8 @@ function diffParts(a: string, b: string) {
   }
 }
 
-function SuggestionCard({ suggestion: s, onNavigate, onAccept, onSkip }: {
-  suggestion: Suggestion; onNavigate: () => void; onAccept: () => void; onSkip: () => void
+function SuggestionCard({ suggestion: s, onNavigate, onAccept, onUndo, onSkip }: {
+  suggestion: Suggestion; onNavigate: () => void; onAccept: () => void; onUndo: () => void; onSkip: () => void
 }) {
   const isDone = s.accepted || s.skipped
   const { prefix, oldMid, newMid, suffix } = diffParts(s.original, s.suggested)
@@ -339,7 +347,12 @@ function SuggestionCard({ suggestion: s, onNavigate, onAccept, onSkip }: {
           <button className="btn-skip" style={styles.skipBtn} onClick={onSkip}>Пропустить</button>
         </div>
       )}
-      {s.accepted && <div style={styles.statusDone}>Принято ✓</div>}
+      {s.accepted && (
+        <div style={styles.doneRow}>
+          <span style={styles.statusDone}>Принято ✓</span>
+          <button className="btn-undo" style={styles.undoBtn} onClick={onUndo}>Отменить</button>
+        </div>
+      )}
       {s.skipped && <div style={styles.statusSkip}>Пропущено</div>}
     </div>
   )
@@ -368,7 +381,7 @@ function SummaryTab({ summary, hasSuggestions }: { summary: string; hasSuggestio
 
   if (!summary) {
     return <div style={{ ...styles.section, padding: '0 16px', alignItems: 'center', justifyContent: 'center' }}>
-      <p style={{ ...(hasSuggestions ? { ...styles.status, fontSize: 13 } : { ...styles.status, fontSize: 12 }), textAlign: 'center' }}>{hasSuggestions ? 'Нет принятых изменений' : 'Нет предложений. Запустите проверку.'}</p>
+      <p style={{ ...styles.status, fontSize: 13, textAlign: 'center' }}>{hasSuggestions ? 'Нет принятых изменений' : 'Нет предложений. Запустите проверку.'}</p>
     </div>
   }
 
@@ -438,29 +451,29 @@ const styles: Record<string, React.CSSProperties> = {
   navActive: { background: '#fff', color: '#1E1E1E', boxShadow: '0 1px 2px rgba(0,0,0,0.15)' },
   content: { flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' },
   section: { display: 'flex', flexDirection: 'column', padding: '0 16px 16px', gap: 16, height: '100%', boxSizing: 'border-box', background: '#fff' },
-  label: { fontWeight: 600, fontSize: 12, color: '#1E1E1E', marginBottom: 2 },
-  input: { border: '1px solid #E6E6E6', background: '#F5F5F5', borderRadius: 7, padding: '9px 11px', fontSize: 12, fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box', color: '#1E1E1E' },
+  label: { fontWeight: 600, fontSize: 13, lineHeight: 1.4, color: '#1E1E1E', marginBottom: 2 },
+  input: { border: '1px solid #E6E6E6', background: '#F5F5F5', borderRadius: 7, padding: '9px 11px', fontSize: 13, lineHeight: 1.4, fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box', color: '#1E1E1E' },
   textarea: { border: '1px solid #E6E6E6', background: '#F5F5F5', borderRadius: 7, padding: '10px 11px', fontSize: 12, fontFamily: 'inherit', resize: 'vertical', minHeight: 240, outline: 'none', lineHeight: 1.6, width: '100%', boxSizing: 'border-box', color: '#1E1E1E' },
-  textareaGrow: { border: '1px solid #E6E6E6', background: '#F5F5F5', borderRadius: 7, padding: '10px 11px', fontSize: 12, fontFamily: 'inherit', resize: 'none', outline: 'none', lineHeight: 1.6, width: '100%', boxSizing: 'border-box', color: '#1E1E1E', flex: 1 },
+  textareaGrow: { border: '1px solid #E6E6E6', background: '#F5F5F5', borderRadius: 7, padding: '10px 11px', fontSize: 13, fontFamily: 'inherit', resize: 'none', outline: 'none', lineHeight: 1.4, width: '100%', boxSizing: 'border-box', color: '#1E1E1E', flex: 1 },
   hint: { fontSize: 12, color: '#8C8C8C', margin: 0 },
   status: { fontSize: 12, color: '#1E1E1E', margin: 0 },
-  link: { fontSize: 12, color: '#0D99FF', textDecoration: 'none', fontWeight: 500, marginTop: -2 },
+  link: { fontSize: 13, lineHeight: 1.4, color: '#8C8C8C', textDecoration: 'none', fontWeight: 500, marginTop: -2 },
   fieldHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  fieldGroup: { display: 'flex', flexDirection: 'column', gap: 4 },
+  fieldGroup: { display: 'flex', flexDirection: 'column', gap: 6 },
   optionsBlock: { display: 'flex', flexDirection: 'row', gap: 8, width: '100%' },
   selectWrap: { position: 'relative', flex: 1 },
-  select: { border: '1px solid #E6E6E6', background: '#F5F5F5', borderRadius: 7, padding: '9px 11px', fontSize: 12, outline: 'none', width: '100%', boxSizing: 'border-box', color: '#1E1E1E', fontFamily: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, textAlign: 'left' },
+  select: { border: '1px solid #E6E6E6', background: '#F5F5F5', borderRadius: 7, padding: '9px 11px', fontSize: 13, lineHeight: 1.4, outline: 'none', width: '100%', boxSizing: 'border-box', color: '#1E1E1E', fontFamily: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, textAlign: 'left' },
   selectArrow: { fontSize: 10, color: '#8C8C8C' },
   selectMenu: { position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: '#fff', border: '1px solid #E6E6E6', borderRadius: 7, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', padding: 4, zIndex: 10 },
-  selectOption: { padding: '8px 9px', borderRadius: 5, fontSize: 12, color: '#1E1E1E', cursor: 'pointer' },
+  selectOption: { padding: '8px 9px', borderRadius: 5, fontSize: 13, lineHeight: 1.4, color: '#1E1E1E', cursor: 'pointer' },
   selectOptionActive: { background: '#F0F0F0', color: '#1E1E1E' },
   primary: { background: '#0D99FF', color: '#fff', border: 'none', borderRadius: 7, padding: '9px 18px', cursor: 'pointer', fontWeight: 600, fontSize: 12 },
   secondary: { background: '#fff', color: '#1E1E1E', border: '1px solid #E6E6E6', borderRadius: 7, padding: '8px 13px', cursor: 'pointer', fontSize: 12, fontWeight: 500 },
   resultsHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  list: { display: 'flex', flexDirection: 'column', gap: 8, overflow: 'auto', borderTop: '1px solid #E6E6E6', borderBottom: '1px solid #E6E6E6', margin: '0 -16px', padding: '8px 16px' },
+  list: { display: 'flex', flexDirection: 'column', gap: 8, overflow: 'auto', background: '#F2F2F2', borderTop: '1px solid #E6E6E6', borderBottom: '1px solid #E6E6E6', margin: '0 -16px', padding: '8px 16px' },
   card: { border: '1px solid #E6E6E6', borderRadius: 7, padding: 13, display: 'flex', flexDirection: 'column', gap: 8, transition: 'opacity 0.2s', background: '#fff' },
   cardMeta: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' },
-  frameName: { fontSize: 11, fontWeight: 600, color: '#1E1E1E', textTransform: 'uppercase', letterSpacing: 0.5 },
+  frameName: { fontSize: 13, fontWeight: 600, color: '#1E1E1E', textTransform: 'uppercase', letterSpacing: 0.5 },
   navArrow: { fontSize: 12, color: '#0D99FF' },
   diff: { display: 'flex', flexDirection: 'column', gap: 4 },
   diffLine: { fontSize: 13, color: '#1E1E1E', lineHeight: 1.4, margin: 0 },
@@ -470,6 +483,8 @@ const styles: Record<string, React.CSSProperties> = {
   skipBtn: { flex: 1, background: '#fff', color: '#1E1E1E', border: '1px solid #E6E6E6', borderRadius: 7, padding: '7px', cursor: 'pointer', fontSize: 12 },
   statusDone: { fontSize: 12, color: '#14AE5C', fontWeight: 600 },
   statusSkip: { fontSize: 12, color: '#8C8C8C' },
+  doneRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  undoBtn: { background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', fontSize: 12, color: '#8C8C8C', textDecoration: 'underline', fontWeight: 500 },
   summaryBox: { background: '#F5F5F5', border: '1px solid #E6E6E6', borderRadius: 7, padding: 13, fontSize: 12, lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word', flex: 1, overflow: 'auto', margin: 0, color: '#1E1E1E' },
   spinner: { width: 26, height: 26, border: '3px solid #E6E6E6', borderTop: '3px solid #0D99FF', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' },
 }

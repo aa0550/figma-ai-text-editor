@@ -17,6 +17,8 @@ style.textContent = `
   .btn-accept:hover { background: #0B87E0 !important; }
   .btn-secondary:hover { background: #F5F5F5 !important; }
   .btn-skip:hover { background: #F5F5F5 !important; }
+  .key-link:hover { color: #1E1E1E !important; }
+  .btn-undo:hover { color: #1E1E1E !important; }
 `
 document.head.appendChild(style)
 

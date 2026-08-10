@@ -4,11 +4,13 @@ import { usePluginMessage, sendMessage, useNavigate } from './usePluginBridge'
 import { checkTextsWithAI } from './deepseek'
 import { requestStorage, saveRules, saveApiKey } from './storage'
 
-type Tab = 'rules' | 'scan' | 'results' | 'summary'
+type Tab = 'scan' | 'results' | 'summary' | 'rules'
 type ScanState = 'idle' | 'scanning' | 'checking' | 'done' | 'error'
 
+const TABS: Tab[] = ['scan', 'results', 'summary', 'rules']
+
 export default function App() {
-  const [tab, setTab] = useState<Tab>('rules')
+  const [tab, setTab] = useState<Tab>('scan')
   const [rules, setRules] = useState('')
   const [apiKey, setApiKey] = useState('')
   const [scanState, setScanState] = useState<ScanState>('idle')
@@ -97,7 +99,7 @@ export default function App() {
       const link = fileKey
         ? `https://www.figma.com/design/${fileKey}?node-id=${encodeURIComponent(s.nodeId)}`
         : `node-id: ${s.nodeId}`
-      return `${i + 1}. Экран «${s.parentName}» (${s.pageName})\n   Было: ${s.original}\n   Стало: ${s.suggested}\n   Ссылка: ${link}`
+      return `${i + 1}. ${link}\nБыло: ${s.original}\nСтало: ${s.suggested}\n${s.reason}`
     })
     return `Изменения текстов — ${date}\n\n${lines.join('\n\n')}`
   }
@@ -105,29 +107,18 @@ export default function App() {
   return (
     <div style={styles.root}>
       <nav style={styles.nav}>
-        {(['rules', 'scan', 'results', 'summary'] as Tab[]).map((t) => (
+        {TABS.map((t) => (
           <button
             key={t}
             style={{ ...styles.navBtn, ...(tab === t ? styles.navActive : {}) }}
             onClick={() => setTab(t)}
           >
             {tabLabel(t)}
-            {t === 'results' && suggestions.length > 0 && (
-              <span style={styles.badge}>{suggestions.filter((s) => !s.accepted && !s.skipped).length}</span>
-            )}
           </button>
         ))}
       </nav>
 
       <div style={styles.content}>
-        {tab === 'rules' && (
-          <RulesTab
-            rules={rules}
-            apiKey={apiKey}
-            onRulesChange={(v) => { dirty.current.rules = true; setRules(v); saveRules(v) }}
-            onApiKeyChange={(v) => { dirty.current.apiKey = true; setApiKey(v); saveApiKey(v) }}
-          />
-        )}
         {tab === 'scan' && (
           <ScanTab
             state={scanState}
@@ -144,11 +135,18 @@ export default function App() {
             onAccept={acceptChange}
             onSkip={skipChange}
             onAcceptAll={acceptAll}
-            onSummary={() => setTab('summary')}
           />
         )}
         {tab === 'summary' && (
           <SummaryTab summary={buildSummary()} />
+        )}
+        {tab === 'rules' && (
+          <RulesTab
+            rules={rules}
+            apiKey={apiKey}
+            onRulesChange={(v) => { dirty.current.rules = true; setRules(v); saveRules(v) }}
+            onApiKeyChange={(v) => { dirty.current.apiKey = true; setApiKey(v); saveApiKey(v) }}
+          />
         )}
       </div>
     </div>
@@ -206,13 +204,13 @@ function ScanTab({ state, progress, error, onStart, onRetry }: {
       )}
       {state === 'done' && (
         <>
-          <p style={{ color: '#0fa958', fontSize: 14 }}>Проверка завершена</p>
+          <p style={{ color: '#067647', fontSize: 14, fontWeight: 600 }}>Проверка завершена</p>
           <button style={styles.secondary} onClick={onRetry}>Проверить снова</button>
         </>
       )}
       {state === 'error' && (
         <>
-          <p style={{ color: '#e53e3e', fontSize: 13, textAlign: 'center' }}>{error}</p>
+          <p style={{ color: '#DC2626', fontSize: 13, textAlign: 'center' }}>{error}</p>
           <button style={styles.secondary} onClick={onRetry}>Попробовать снова</button>
         </>
       )}
@@ -220,13 +218,12 @@ function ScanTab({ state, progress, error, onStart, onRetry }: {
   )
 }
 
-function ResultsTab({ suggestions, onNavigate, onAccept, onSkip, onAcceptAll, onSummary }: {
+function ResultsTab({ suggestions, onNavigate, onAccept, onSkip, onAcceptAll }: {
   suggestions: Suggestion[]
   onNavigate: (s: Suggestion) => void
   onAccept: (s: Suggestion) => void
   onSkip: (s: Suggestion) => void
   onAcceptAll: () => void
-  onSummary: () => void
 }) {
   const pending = suggestions.filter((s) => !s.accepted && !s.skipped)
   const accepted = suggestions.filter((s) => s.accepted)
@@ -241,10 +238,7 @@ function ResultsTab({ suggestions, onNavigate, onAccept, onSkip, onAcceptAll, on
     <div style={styles.section}>
       <div style={styles.resultsHeader}>
         <span style={styles.hint}>{pending.length} ожидают · {accepted.length} принято</span>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {pending.length > 0 && <button style={styles.secondary} onClick={onAcceptAll}>Принять все</button>}
-          {accepted.length > 0 && <button style={styles.primary} onClick={onSummary}>Саммари</button>}
-        </div>
+        {pending.length > 0 && <button style={styles.secondary} onClick={onAcceptAll}>Принять все</button>}
       </div>
       <div style={styles.list}>
         {suggestions.map((s) => (
@@ -312,14 +306,25 @@ function SuggestionCard({ suggestion: s, onNavigate, onAccept, onSkip }: {
   )
 }
 
+function copyToClipboard(text: string) {
+  const ta = document.createElement('textarea')
+  ta.value = text
+  ta.style.position = 'fixed'
+  ta.style.opacity = '0'
+  document.body.appendChild(ta)
+  ta.focus()
+  ta.select()
+  document.execCommand('copy')
+  document.body.removeChild(ta)
+}
+
 function SummaryTab({ summary }: { summary: string }) {
   const [copied, setCopied] = useState(false)
 
   function copy() {
-    navigator.clipboard.writeText(summary).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    })
+    copyToClipboard(summary)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   return (
@@ -343,39 +348,38 @@ function Spinner({ label }: { label: string }) {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  root: { display: 'flex', flexDirection: 'column', height: '100vh', fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#1a1a1a', background: '#fff' },
-  nav: { display: 'flex', borderBottom: '1px solid #e5e5e5', background: '#fafafa' },
-  navBtn: { flex: 1, padding: '10px 4px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 12, color: '#666', position: 'relative' },
-  navActive: { color: '#0066ff', borderBottom: '2px solid #0066ff', fontWeight: 600 },
-  badge: { position: 'absolute', top: 4, right: 4, background: '#0066ff', color: '#fff', borderRadius: 10, fontSize: 10, padding: '1px 5px', lineHeight: '14px' },
-  content: { flex: 1, overflow: 'auto' },
-  section: { display: 'flex', flexDirection: 'column', padding: 16, gap: 10, height: '100%', boxSizing: 'border-box' },
-  label: { fontWeight: 600, fontSize: 12, color: '#444', marginBottom: 2 },
-  input: { border: '1px solid #ddd', borderRadius: 6, padding: '8px 10px', fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box' },
-  textarea: { border: '1px solid #ddd', borderRadius: 6, padding: '10px', fontSize: 13, resize: 'vertical', minHeight: 240, outline: 'none', lineHeight: 1.6, width: '100%', boxSizing: 'border-box' },
-  hint: { fontSize: 12, color: '#888', margin: 0 },
-  link: { fontSize: 12, color: '#0066ff', textDecoration: 'none', marginTop: -4 },
-  primary: { background: '#0066ff', color: '#fff', border: 'none', borderRadius: 6, padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: 13 },
-  secondary: { background: '#f0f0f0', color: '#333', border: 'none', borderRadius: 6, padding: '8px 14px', cursor: 'pointer', fontSize: 13 },
+  root: { display: 'flex', flexDirection: 'column', height: '100vh', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontSize: 13, color: '#111827', background: '#F7F8FA' },
+  nav: { display: 'flex', gap: 2, margin: '12px 12px 0', padding: 4, background: '#EEF0F3', borderRadius: 12 },
+  navBtn: { flex: 1, padding: '8px 4px', border: 'none', background: 'transparent', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 500, color: '#6B7280', transition: 'background 0.15s, color 0.15s' },
+  navActive: { background: '#fff', color: '#4D6BFE', fontWeight: 600, boxShadow: '0 1px 2px rgba(16,24,40,0.08)' },
+  content: { flex: 1, overflow: 'auto', padding: 12, display: 'flex', flexDirection: 'column' },
+  section: { display: 'flex', flexDirection: 'column', padding: 16, gap: 10, height: '100%', boxSizing: 'border-box', background: '#fff', border: '1px solid #E5E7EB', borderRadius: 14, boxShadow: '0 1px 2px rgba(16,24,40,0.04)' },
+  label: { fontWeight: 600, fontSize: 12, color: '#374151', marginBottom: 2 },
+  input: { border: '1px solid #E5E7EB', background: '#F9FAFB', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box', color: '#111827' },
+  textarea: { border: '1px solid #E5E7EB', background: '#F9FAFB', borderRadius: 10, padding: '10px 12px', fontSize: 13, resize: 'vertical', minHeight: 240, outline: 'none', lineHeight: 1.6, width: '100%', boxSizing: 'border-box', color: '#111827' },
+  hint: { fontSize: 12, color: '#9CA3AF', margin: 0 },
+  link: { fontSize: 12, color: '#4D6BFE', textDecoration: 'none', marginTop: -4, fontWeight: 500 },
+  primary: { background: '#4D6BFE', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', cursor: 'pointer', fontWeight: 600, fontSize: 13, boxShadow: '0 1px 2px rgba(16,24,40,0.06)' },
+  secondary: { background: '#fff', color: '#374151', border: '1px solid #E5E7EB', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 500 },
   resultsHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   list: { display: 'flex', flexDirection: 'column', gap: 10, overflow: 'auto' },
-  card: { border: '1px solid #e5e5e5', borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 8, transition: 'opacity 0.2s' },
+  card: { border: '1px solid #E5E7EB', borderRadius: 12, padding: 14, display: 'flex', flexDirection: 'column', gap: 8, transition: 'opacity 0.2s', background: '#fff', boxShadow: '0 1px 2px rgba(16,24,40,0.04)' },
   cardMeta: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' },
-  frameName: { fontSize: 11, fontWeight: 600, color: '#555', textTransform: 'uppercase', letterSpacing: 0.5 },
-  navArrow: { fontSize: 11, color: '#0066ff' },
+  frameName: { fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: 0.5 },
+  navArrow: { fontSize: 11, color: '#4D6BFE' },
   diff: { display: 'flex', flexDirection: 'column', gap: 4 },
-  diffOld: { background: '#fff5f5', borderRadius: 4, padding: '6px 8px', fontSize: 13, color: '#c0392b', borderLeft: '3px solid #e57373', lineHeight: 1.5 },
-  diffNew: { background: '#f0fff4', borderRadius: 4, padding: '6px 8px', fontSize: 13, color: '#1a7a3c', borderLeft: '3px solid #4caf50', lineHeight: 1.5 },
+  diffOld: { background: '#FEF2F2', borderRadius: 8, padding: '6px 8px', fontSize: 13, color: '#B42318', borderLeft: '3px solid #F97066', lineHeight: 1.5 },
+  diffNew: { background: '#ECFDF3', borderRadius: 8, padding: '6px 8px', fontSize: 13, color: '#067647', borderLeft: '3px solid #17B26A', lineHeight: 1.5 },
   diffLabel: { fontSize: 10, fontWeight: 700, marginRight: 6, opacity: 0.6, textTransform: 'uppercase' },
-  diffOldMark: { background: '#f8b4b4', color: '#7a1f1f', borderRadius: 3, padding: '0 2px', textDecoration: 'line-through' },
-  diffNewMark: { background: '#a8e6b8', color: '#12401f', borderRadius: 3, padding: '0 2px', fontWeight: 700 },
-  reason: { fontSize: 11, color: '#888', fontStyle: 'italic' },
+  diffOldMark: { background: '#FEE4E2', color: '#912018', borderRadius: 3, padding: '0 2px', textDecoration: 'line-through' },
+  diffNewMark: { background: '#D1FADF', color: '#05603A', borderRadius: 3, padding: '0 2px', fontWeight: 700 },
+  reason: { fontSize: 11, color: '#9CA3AF' },
   cardActions: { display: 'flex', gap: 8 },
-  acceptBtn: { flex: 1, background: '#f0fff4', color: '#1a7a3c', border: '1px solid #4caf50', borderRadius: 6, padding: '6px', cursor: 'pointer', fontWeight: 600, fontSize: 12 },
-  skipBtn: { flex: 1, background: '#fafafa', color: '#666', border: '1px solid #ddd', borderRadius: 6, padding: '6px', cursor: 'pointer', fontSize: 12 },
-  statusDone: { fontSize: 12, color: '#1a7a3c', fontWeight: 600 },
-  statusSkip: { fontSize: 12, color: '#999' },
+  acceptBtn: { flex: 1, background: '#ECFDF3', color: '#067647', border: '1px solid #ABEFC6', borderRadius: 8, padding: '6px', cursor: 'pointer', fontWeight: 600, fontSize: 12 },
+  skipBtn: { flex: 1, background: '#fff', color: '#6B7280', border: '1px solid #E5E7EB', borderRadius: 8, padding: '6px', cursor: 'pointer', fontSize: 12 },
+  statusDone: { fontSize: 12, color: '#067647', fontWeight: 600 },
+  statusSkip: { fontSize: 12, color: '#9CA3AF' },
   summaryHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  summaryBox: { background: '#f8f8f8', border: '1px solid #e5e5e5', borderRadius: 8, padding: 14, fontSize: 12, lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word', flex: 1, overflow: 'auto', margin: 0 },
-  spinner: { width: 28, height: 28, border: '3px solid #e5e5e5', borderTop: '3px solid #0066ff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' },
+  summaryBox: { background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 10, padding: 14, fontSize: 12, lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word', flex: 1, overflow: 'auto', margin: 0, color: '#374151' },
+  spinner: { width: 28, height: 28, border: '3px solid #E5E7EB', borderTop: '3px solid #4D6BFE', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' },
 }

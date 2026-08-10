@@ -303,7 +303,7 @@ function ResultsTab({ suggestions, onNavigate, onAccept, onUndo, onSkip, onAccep
           />
         ))}
       </div>
-      {pending.length > 0 && <button className="btn-secondary" style={styles.secondary} onClick={onAcceptAll}>Принять все</button>}
+      <button className="btn-secondary" style={styles.secondary} onClick={onAcceptAll}>Принять все</button>
     </div>
   )
 }
@@ -476,8 +476,8 @@ const styles: Record<string, React.CSSProperties> = {
   frameName: { fontSize: 13, fontWeight: 600, color: '#1E1E1E', textTransform: 'uppercase', letterSpacing: 0.5 },
   navArrow: { fontSize: 12, color: '#0D99FF' },
   diff: { display: 'flex', flexDirection: 'column', gap: 4 },
-  diffLine: { fontSize: 13, color: '#1E1E1E', lineHeight: 1.4, margin: 0 },
-  reason: { fontSize: 13, color: '#1E1E1E', lineHeight: 1.4, margin: 0 },
+  diffLine: { fontSize: 12, color: '#1E1E1E', lineHeight: 1.4, margin: 0 },
+  reason: { fontSize: 12, color: '#1E1E1E', lineHeight: 1.4, margin: 0 },
   cardActions: { display: 'flex', gap: 8 },
   acceptBtn: { flex: 1, background: '#0D99FF', color: '#fff', border: 'none', borderRadius: 7, padding: '7px', cursor: 'pointer', fontWeight: 600, fontSize: 12 },
   skipBtn: { flex: 1, background: '#fff', color: '#1E1E1E', border: '1px solid #E6E6E6', borderRadius: 7, padding: '7px', cursor: 'pointer', fontSize: 12 },

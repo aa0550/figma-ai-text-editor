@@ -358,7 +358,7 @@ function SummaryTab({ summary, hasSuggestions }: { summary: string; hasSuggestio
 
   if (!summary) {
     return <div style={{ ...styles.section, alignItems: 'center', justifyContent: 'center' }}>
-      <p style={styles.status}>{hasSuggestions ? 'Нет принятых изменений' : 'Нет предложений. Запустите проверку.'}</p>
+      <p style={hasSuggestions ? { ...styles.status, fontSize: 13 } : styles.status}>{hasSuggestions ? 'Нет принятых изменений' : 'Нет предложений. Запустите проверку.'}</p>
     </div>
   }
 
@@ -433,7 +433,7 @@ const styles: Record<string, React.CSSProperties> = {
   textarea: { border: '1px solid #E5E7EB', background: '#F9FAFB', borderRadius: 10, padding: '10px 12px', fontSize: 13, resize: 'vertical', minHeight: 240, outline: 'none', lineHeight: 1.6, width: '100%', boxSizing: 'border-box', color: '#111827' },
   textareaGrow: { border: '1px solid #E5E7EB', background: '#F9FAFB', borderRadius: 10, padding: '10px 12px', fontSize: 13, resize: 'none', outline: 'none', lineHeight: 1.6, width: '100%', boxSizing: 'border-box', color: '#111827', flex: 1 },
   hint: { fontSize: 12, color: '#9CA3AF', margin: 0 },
-  status: { fontSize: 12, color: '#111827', fontWeight: 700, margin: 0 },
+  status: { fontSize: 12, color: '#111827', margin: 0 },
   link: { fontSize: 12, color: '#4D6BFE', textDecoration: 'none', fontWeight: 500, marginTop: -1 },
   fieldHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   fieldGroup: { display: 'flex', flexDirection: 'column', gap: 6 },

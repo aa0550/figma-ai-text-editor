@@ -96,6 +96,7 @@ figma.ui.onmessage = async (msg) => {
 
   if (msg.type === 'get-file-key') {
     console.log('[AI Text Editor] figma.fileKey =', figma.fileKey)
+    figma.notify(`fileKey: ${figma.fileKey ?? 'null/undefined'}`)
     figma.ui.postMessage({ type: 'file-key', key: figma.fileKey ?? null })
   }
 }

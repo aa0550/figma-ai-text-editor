@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import type { Suggestion, TextNode, PluginMessage } from '../shared/types'
+import type { Suggestion, TextNode, PluginMessage, ScanScope } from '../shared/types'
 import { usePluginMessage, sendMessage, useNavigate } from './usePluginBridge'
 import { checkTextsWithAI } from './deepseek'
 import { requestStorage, saveRules, saveApiKey } from './storage'
@@ -14,6 +14,8 @@ export default function App() {
   const [rules, setRules] = useState('')
   const [apiKey, setApiKey] = useState('')
   const [scanState, setScanState] = useState<ScanState>('idle')
+  const [scope, setScope] = useState<ScanScope>('page')
+  const [onlyVisible, setOnlyVisible] = useState(true)
   const [progress, setProgress] = useState({ done: 0, total: 0 })
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [errorMsg, setErrorMsg] = useState('')
@@ -69,7 +71,7 @@ export default function App() {
     setScanState('scanning')
     setSuggestions([])
     sendMessage({ type: 'get-file-key' })
-    sendMessage({ type: 'start-scan' })
+    sendMessage({ type: 'start-scan', scope, onlyVisible })
   }
 
   function updateSuggestion(nodeId: string, patch: Partial<Suggestion>) {
@@ -124,6 +126,10 @@ export default function App() {
             state={scanState}
             progress={progress}
             error={errorMsg}
+            scope={scope}
+            onScopeChange={setScope}
+            onlyVisible={onlyVisible}
+            onOnlyVisibleChange={setOnlyVisible}
             onStart={startScan}
             onRetry={() => { setScanState('idle'); setErrorMsg('') }}
           />
@@ -191,15 +197,35 @@ function RulesTab({ rules, apiKey, onRulesChange, onApiKeyChange }: {
   )
 }
 
-function ScanTab({ state, progress, error, onStart, onRetry }: {
+function ScanTab({ state, progress, error, scope, onScopeChange, onlyVisible, onOnlyVisibleChange, onStart, onRetry }: {
   state: ScanState; progress: { done: number; total: number }
-  error: string; onStart: () => void; onRetry: () => void
+  error: string
+  scope: ScanScope; onScopeChange: (v: ScanScope) => void
+  onlyVisible: boolean; onOnlyVisibleChange: (v: boolean) => void
+  onStart: () => void; onRetry: () => void
 }) {
   return (
     <div style={{ ...styles.section, alignItems: 'center', justifyContent: 'center', height: '100%' }}>
       {state === 'idle' && (
         <>
-          <p style={styles.hint}>Плагин проверит все тексты на текущей странице</p>
+          <div style={styles.optionsBlock}>
+            <SegmentedToggle
+              value={scope}
+              onChange={onScopeChange}
+              options={[
+                { value: 'page', label: 'Текущая страница' },
+                { value: 'selection', label: 'Только выделенное' },
+              ]}
+            />
+            <SegmentedToggle
+              value={onlyVisible ? 'visible' : 'all'}
+              onChange={(v) => onOnlyVisibleChange(v === 'visible')}
+              options={[
+                { value: 'all', label: 'Все элементы' },
+                { value: 'visible', label: 'Только видимые' },
+              ]}
+            />
+          </div>
           <button style={styles.primary} onClick={onStart}>Запустить проверку</button>
         </>
       )}
@@ -355,11 +381,31 @@ function Spinner({ label, labelStyle }: { label: string; labelStyle?: React.CSSP
   )
 }
 
+function SegmentedToggle<T extends string>({ value, onChange, options }: {
+  value: T
+  onChange: (v: T) => void
+  options: { value: T; label: string }[]
+}) {
+  return (
+    <div style={styles.toggleGroup}>
+      {options.map((opt) => (
+        <button
+          key={opt.value}
+          style={{ ...styles.toggleBtn, ...(value === opt.value ? styles.toggleActive : {}) }}
+          onClick={() => onChange(opt.value)}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 const styles: Record<string, React.CSSProperties> = {
   root: { display: 'flex', flexDirection: 'column', height: '100vh', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontSize: 13, color: '#111827', background: '#F7F8FA' },
-  nav: { display: 'flex', gap: 2, margin: '12px 12px 0', padding: 4, background: '#EEF0F3', borderRadius: 12 },
-  navBtn: { flex: 1, padding: '8px 4px', border: 'none', background: 'transparent', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 500, color: '#6B7280', transition: 'background 0.15s, color 0.15s' },
-  navActive: { background: '#fff', color: '#4D6BFE', fontWeight: 600, boxShadow: '0 1px 2px rgba(16,24,40,0.08)' },
+  nav: { display: 'flex', gap: 2, margin: '12px 12px 0', padding: 4, background: 'rgba(0,0,0,0.05)', borderRadius: 12 },
+  navBtn: { flex: 1, padding: '8px 4px', border: 'none', background: 'transparent', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#111827', transition: 'background 0.15s, color 0.15s' },
+  navActive: { background: '#fff', color: '#111827', boxShadow: '0 1px 2px rgba(16,24,40,0.08)' },
   content: { flex: 1, overflow: 'auto', padding: 12, display: 'flex', flexDirection: 'column' },
   section: { display: 'flex', flexDirection: 'column', padding: 16, gap: 16, height: '100%', boxSizing: 'border-box', background: '#fff', border: '1px solid #E5E7EB', borderRadius: 14, boxShadow: '0 1px 2px rgba(16,24,40,0.04)' },
   label: { fontWeight: 600, fontSize: 12, color: '#374151', marginBottom: 2 },
@@ -371,6 +417,10 @@ const styles: Record<string, React.CSSProperties> = {
   link: { fontSize: 12, color: '#4D6BFE', textDecoration: 'none', fontWeight: 500 },
   fieldHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   fieldGroup: { display: 'flex', flexDirection: 'column', gap: 8 },
+  optionsBlock: { display: 'flex', flexDirection: 'column', gap: 6, width: '100%' },
+  toggleGroup: { display: 'flex', gap: 2, padding: 4, background: 'rgba(0,0,0,0.05)', borderRadius: 12 },
+  toggleBtn: { flex: 1, padding: '8px 4px', border: 'none', background: 'transparent', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#111827', transition: 'background 0.15s, color 0.15s' },
+  toggleActive: { background: '#fff', color: '#111827', boxShadow: '0 1px 2px rgba(16,24,40,0.08)' },
   primary: { background: '#4D6BFE', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', cursor: 'pointer', fontWeight: 600, fontSize: 13, boxShadow: '0 1px 2px rgba(16,24,40,0.06)' },
   secondary: { background: '#fff', color: '#374151', border: '1px solid #E5E7EB', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 500 },
   resultsHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },

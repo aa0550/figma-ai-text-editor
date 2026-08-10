@@ -16,6 +16,8 @@ export interface Suggestion {
   skipped?: boolean
 }
 
+export type ScanScope = 'page' | 'selection'
+
 export type PluginMessage =
   | { type: 'scan-complete'; nodes: TextNode[] }
   | { type: 'navigate-to-node'; nodeId: string }
@@ -27,7 +29,7 @@ export type PluginMessage =
   | { type: 'storage-data'; rules: string; apiKey: string }
 
 export type UIMessage =
-  | { type: 'start-scan' }
+  | { type: 'start-scan'; scope: ScanScope; onlyVisible: boolean }
   | { type: 'navigate-to-node'; nodeId: string }
   | { type: 'apply-change'; nodeId: string; newText: string }
   | { type: 'apply-all'; changes: { nodeId: string; newText: string }[] }

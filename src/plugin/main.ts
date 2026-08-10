@@ -13,8 +13,8 @@ function getParentFrameName(node: BaseNode): string {
   return 'Root'
 }
 
-function collectTextNodes(node: SceneNode, results: { id: string; text: string; parentName: string; pageName: string }[]) {
-  if (!node.visible) return
+function collectTextNodes(node: SceneNode, results: { id: string; text: string; parentName: string; pageName: string }[], onlyVisible: boolean) {
+  if (onlyVisible && !node.visible) return
 
   if (node.type === 'TEXT') {
     results.push({
@@ -26,7 +26,7 @@ function collectTextNodes(node: SceneNode, results: { id: string; text: string; 
   }
   if ('children' in node) {
     for (const child of node.children) {
-      collectTextNodes(child, results)
+      collectTextNodes(child, results, onlyVisible)
     }
   }
 }
@@ -49,8 +49,9 @@ figma.ui.onmessage = async (msg) => {
 
   if (msg.type === 'start-scan') {
     const nodes: { id: string; text: string; parentName: string; pageName: string }[] = []
-    for (const node of figma.currentPage.children) {
-      collectTextNodes(node, nodes)
+    const roots = msg.scope === 'selection' ? figma.currentPage.selection : figma.currentPage.children
+    for (const node of roots) {
+      collectTextNodes(node, nodes, msg.onlyVisible)
     }
     figma.ui.postMessage({ type: 'scan-complete', nodes })
   }

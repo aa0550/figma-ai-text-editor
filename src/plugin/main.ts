@@ -4,7 +4,7 @@ import type { SummaryItem } from '../shared/types'
 
 figma.showUI(__html__, { width: 480, height: 640, title: 'AI Text Editor' })
 
-function getParentFrame(node: BaseNode): BaseNode | null {
+function getParentFrame(node: BaseNode): FrameNode | ComponentNode | ComponentSetNode | null {
   let current: BaseNode | null = node.parent
   while (current) {
     if (current.type === 'FRAME' || current.type === 'COMPONENT' || current.type === 'COMPONENT_SET') {
@@ -15,16 +15,19 @@ function getParentFrame(node: BaseNode): BaseNode | null {
   return null
 }
 
-function collectTextNodes(node: SceneNode, results: { id: string; text: string; parentName: string; parentId: string; pageName: string }[], onlyVisible: boolean) {
+function collectTextNodes(node: SceneNode, results: { id: string; text: string; parentName: string; parentId: string; parentX: number; parentY: number; pageName: string }[], onlyVisible: boolean) {
   if (onlyVisible && !node.visible) return
 
   if (node.type === 'TEXT') {
     const parentFrame = getParentFrame(node)
+    const box = parentFrame?.absoluteBoundingBox
     results.push({
       id: node.id,
       text: node.characters,
       parentName: parentFrame ? parentFrame.name : 'Root',
       parentId: parentFrame ? parentFrame.id : node.id,
+      parentX: box ? Math.round(box.x) : 0,
+      parentY: box ? Math.round(box.y) : 0,
       pageName: figma.currentPage.name,
     })
   }
@@ -52,7 +55,7 @@ figma.ui.onmessage = async (msg) => {
   }
 
   if (msg.type === 'start-scan') {
-    const nodes: { id: string; text: string; parentName: string; parentId: string; pageName: string }[] = []
+    const nodes: { id: string; text: string; parentName: string; parentId: string; parentX: number; parentY: number; pageName: string }[] = []
     const roots = msg.scope === 'selection' ? figma.currentPage.selection : figma.currentPage.children
     for (const node of roots) {
       collectTextNodes(node, nodes, msg.onlyVisible)
@@ -112,9 +115,10 @@ figma.ui.onmessage = async (msg) => {
     msg.items.forEach((item: SummaryItem, i: number) => {
       const prefix = `${i + 1}. Экран `
       const label = `«${item.parentName}»`
+      const suffix = ` (страница «${item.pageName}», x=${item.parentX}, y=${item.parentY})`
       const start = text.length + prefix.length
       links.push({ start, end: start + label.length, nodeId: item.parentId })
-      text += `${prefix}${label}\nБыло: ${item.original}\nСтало: ${item.suggested}\n${item.reason}`
+      text += `${prefix}${label}${suffix}\nБыло: ${item.original}\nСтало: ${item.suggested}\n${item.reason}`
       if (i < msg.items.length - 1) text += '\n\n'
     })
 

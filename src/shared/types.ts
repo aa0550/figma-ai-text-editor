@@ -3,6 +3,8 @@ export interface TextNode {
   text: string
   parentName: string
   parentId: string
+  parentX: number
+  parentY: number
   pageName: string
 }
 
@@ -13,6 +15,8 @@ export interface Suggestion {
   reason: string
   parentName: string
   parentId: string
+  parentX: number
+  parentY: number
   pageName: string
   accepted?: boolean
   skipped?: boolean
@@ -23,6 +27,9 @@ export type ScanScope = 'page' | 'selection'
 export interface SummaryItem {
   parentId: string
   parentName: string
+  parentX: number
+  parentY: number
+  pageName: string
   original: string
   suggested: string
   reason: string

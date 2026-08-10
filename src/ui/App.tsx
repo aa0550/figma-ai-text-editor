@@ -118,10 +118,11 @@ export default function App() {
     const accepted = suggestions.filter((s) => s.accepted)
     if (accepted.length === 0) return ''
     const lines = accepted.map((s, i) => {
+      const location = `Экран «${s.parentName}» (страница «${s.pageName}», x=${s.parentX}, y=${s.parentY})`
       const link = fileKey
-        ? `https://www.figma.com/design/${fileKey}?node-id=${s.parentId.replace(/:/g, '-')}`
-        : `node-id: ${s.parentId}`
-      return `${i + 1}. ${link}\nБыло: ${s.original}\nСтало: ${s.suggested}\n${s.reason}`
+        ? `\nСсылка: https://www.figma.com/design/${fileKey}?node-id=${s.parentId.replace(/:/g, '-')}`
+        : ''
+      return `${i + 1}. ${location}${link}\nБыло: ${s.original}\nСтало: ${s.suggested}\n${s.reason}`
     })
     return lines.join('\n\n')
   }
@@ -401,6 +402,9 @@ function SummaryTab({ summary, hasSuggestions, accepted }: { summary: string; ha
       items: accepted.map((s) => ({
         parentId: s.parentId,
         parentName: s.parentName,
+        parentX: s.parentX,
+        parentY: s.parentY,
+        pageName: s.pageName,
         original: s.original,
         suggested: s.suggested,
         reason: s.reason,

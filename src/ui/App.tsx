@@ -93,7 +93,7 @@ export default function App() {
 
   function buildSummary(): string {
     const accepted = suggestions.filter((s) => s.accepted)
-    if (accepted.length === 0) return 'Изменений не принято.'
+    if (accepted.length === 0) return ''
     const date = new Date().toLocaleDateString('ru-RU')
     const lines = accepted.map((s, i) => {
       const link = fileKey
@@ -163,7 +163,12 @@ function RulesTab({ rules, apiKey, onRulesChange, onApiKeyChange }: {
 }) {
   return (
     <div style={styles.section}>
-      <label style={styles.label}>DeepSeek API Key</label>
+      <div style={styles.fieldHeader}>
+        <label style={styles.label}>DeepSeek API Key</label>
+        <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noreferrer" style={styles.link}>
+          Получить ключ
+        </a>
+      </div>
       <input
         type="password"
         value={apiKey}
@@ -171,17 +176,13 @@ function RulesTab({ rules, apiKey, onRulesChange, onApiKeyChange }: {
         placeholder="sk-..."
         style={styles.input}
       />
-      <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noreferrer" style={styles.link}>
-        Получить ключ →
-      </a>
       <label style={styles.label} >Правила и Tone of Voice</label>
       <textarea
         value={rules}
         onChange={(e) => onRulesChange(e.target.value)}
         placeholder="Опишите правила написания текстов: обращение к пользователю, пунктуация, стиль, запрещённые слова и т.д."
-        style={styles.textarea}
+        style={styles.textareaGrow}
       />
-      <p style={styles.hint}>Изменения сохраняются автоматически</p>
     </div>
   )
 }
@@ -204,7 +205,7 @@ function ScanTab({ state, progress, error, onStart, onRetry }: {
       )}
       {state === 'done' && (
         <>
-          <p style={{ color: '#067647', fontSize: 14, fontWeight: 600 }}>Проверка завершена</p>
+          <p style={styles.hint}>Проверка завершена</p>
           <button style={styles.secondary} onClick={onRetry}>Проверить снова</button>
         </>
       )}
@@ -327,13 +328,16 @@ function SummaryTab({ summary }: { summary: string }) {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  if (!summary) {
+    return <div style={{ ...styles.section, alignItems: 'center', padding: 32 }}>
+      <p style={styles.hint}>Нет принятых изменений</p>
+    </div>
+  }
+
   return (
     <div style={styles.section}>
-      <div style={styles.summaryHeader}>
-        <span style={styles.label}>Саммари для разработчиков</span>
-        <button style={styles.secondary} onClick={copy}>{copied ? 'Скопировано!' : 'Копировать'}</button>
-      </div>
       <pre style={styles.summaryBox}>{summary}</pre>
+      <button style={styles.secondary} onClick={copy}>{copied ? 'Скопировано!' : 'Копировать'}</button>
     </div>
   )
 }
@@ -357,8 +361,10 @@ const styles: Record<string, React.CSSProperties> = {
   label: { fontWeight: 600, fontSize: 12, color: '#374151', marginBottom: 2 },
   input: { border: '1px solid #E5E7EB', background: '#F9FAFB', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box', color: '#111827' },
   textarea: { border: '1px solid #E5E7EB', background: '#F9FAFB', borderRadius: 10, padding: '10px 12px', fontSize: 13, resize: 'vertical', minHeight: 240, outline: 'none', lineHeight: 1.6, width: '100%', boxSizing: 'border-box', color: '#111827' },
+  textareaGrow: { border: '1px solid #E5E7EB', background: '#F9FAFB', borderRadius: 10, padding: '10px 12px', fontSize: 13, resize: 'none', outline: 'none', lineHeight: 1.6, width: '100%', boxSizing: 'border-box', color: '#111827', flex: 1 },
   hint: { fontSize: 12, color: '#9CA3AF', margin: 0 },
-  link: { fontSize: 12, color: '#4D6BFE', textDecoration: 'none', marginTop: -4, fontWeight: 500 },
+  link: { fontSize: 12, color: '#4D6BFE', textDecoration: 'none', fontWeight: 500 },
+  fieldHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   primary: { background: '#4D6BFE', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', cursor: 'pointer', fontWeight: 600, fontSize: 13, boxShadow: '0 1px 2px rgba(16,24,40,0.06)' },
   secondary: { background: '#fff', color: '#374151', border: '1px solid #E5E7EB', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 500 },
   resultsHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
@@ -379,7 +385,6 @@ const styles: Record<string, React.CSSProperties> = {
   skipBtn: { flex: 1, background: '#fff', color: '#6B7280', border: '1px solid #E5E7EB', borderRadius: 8, padding: '6px', cursor: 'pointer', fontSize: 12 },
   statusDone: { fontSize: 12, color: '#067647', fontWeight: 600 },
   statusSkip: { fontSize: 12, color: '#9CA3AF' },
-  summaryHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   summaryBox: { background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 10, padding: 14, fontSize: 12, lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word', flex: 1, overflow: 'auto', margin: 0, color: '#374151' },
   spinner: { width: 28, height: 28, border: '3px solid #E5E7EB', borderTop: '3px solid #4D6BFE', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' },
 }

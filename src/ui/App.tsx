@@ -401,7 +401,7 @@ function SegmentedToggle<T extends string>({ value, onChange, options }: {
 
 const styles: Record<string, React.CSSProperties> = {
   root: { display: 'flex', flexDirection: 'column', height: '100vh', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontSize: 13, color: '#111827', background: '#F7F8FA' },
-  nav: { display: 'flex', gap: 2, margin: '12px 12px 0', padding: 4, background: 'rgba(0,0,0,0.05)', borderRadius: 12 },
+  nav: { display: 'flex', gap: 2, margin: '12px 12px 0', padding: 4, background: '#F2F3F5', borderRadius: 12 },
   navBtn: { flex: 1, padding: '8px 4px', border: 'none', background: 'transparent', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#111827', transition: 'background 0.15s, color 0.15s' },
   navActive: { background: '#fff', color: '#111827', boxShadow: '0 1px 2px rgba(16,24,40,0.08)' },
   content: { flex: 1, overflow: 'auto', padding: 12, display: 'flex', flexDirection: 'column' },
@@ -416,7 +416,7 @@ const styles: Record<string, React.CSSProperties> = {
   fieldHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   fieldGroup: { display: 'flex', flexDirection: 'column', gap: 8 },
   optionsBlock: { display: 'flex', flexDirection: 'column', gap: 6, width: '100%' },
-  toggleGroup: { display: 'flex', gap: 2, padding: 4, background: 'rgba(0,0,0,0.05)', borderRadius: 12 },
+  toggleGroup: { display: 'flex', gap: 2, padding: 4, background: '#F2F3F5', borderRadius: 12 },
   toggleBtn: { flex: 1, padding: '8px 4px', border: 'none', background: 'transparent', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#111827', transition: 'background 0.15s, color 0.15s' },
   toggleActive: { background: '#fff', color: '#111827', boxShadow: '0 1px 2px rgba(16,24,40,0.08)' },
   primary: { background: '#4D6BFE', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', cursor: 'pointer', fontWeight: 600, fontSize: 13, boxShadow: '0 1px 2px rgba(16,24,40,0.06)' },

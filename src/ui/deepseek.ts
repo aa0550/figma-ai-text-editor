@@ -111,6 +111,7 @@ ${textsJson}
       suggested: item.suggested,
       reason: item.reason,
       parentName: node.parentName,
+      parentId: node.parentId,
       pageName: node.pageName,
     }]
   })

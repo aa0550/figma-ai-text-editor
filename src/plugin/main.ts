@@ -2,25 +2,27 @@
 
 figma.showUI(__html__, { width: 480, height: 640, title: 'UX Text Editor' })
 
-function getParentFrameName(node: BaseNode): string {
+function getParentFrame(node: BaseNode): BaseNode | null {
   let current: BaseNode | null = node.parent
   while (current) {
     if (current.type === 'FRAME' || current.type === 'COMPONENT' || current.type === 'COMPONENT_SET') {
-      return current.name
+      return current
     }
     current = current.parent
   }
-  return 'Root'
+  return null
 }
 
-function collectTextNodes(node: SceneNode, results: { id: string; text: string; parentName: string; pageName: string }[], onlyVisible: boolean) {
+function collectTextNodes(node: SceneNode, results: { id: string; text: string; parentName: string; parentId: string; pageName: string }[], onlyVisible: boolean) {
   if (onlyVisible && !node.visible) return
 
   if (node.type === 'TEXT') {
+    const parentFrame = getParentFrame(node)
     results.push({
       id: node.id,
       text: node.characters,
-      parentName: getParentFrameName(node),
+      parentName: parentFrame ? parentFrame.name : 'Root',
+      parentId: parentFrame ? parentFrame.id : node.id,
       pageName: figma.currentPage.name,
     })
   }
@@ -48,7 +50,7 @@ figma.ui.onmessage = async (msg) => {
   }
 
   if (msg.type === 'start-scan') {
-    const nodes: { id: string; text: string; parentName: string; pageName: string }[] = []
+    const nodes: { id: string; text: string; parentName: string; parentId: string; pageName: string }[] = []
     const roots = msg.scope === 'selection' ? figma.currentPage.selection : figma.currentPage.children
     for (const node of roots) {
       collectTextNodes(node, nodes, msg.onlyVisible)

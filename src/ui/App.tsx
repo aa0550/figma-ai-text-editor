@@ -99,8 +99,8 @@ export default function App() {
     const date = new Date().toLocaleDateString('ru-RU')
     const lines = accepted.map((s, i) => {
       const link = fileKey
-        ? `https://www.figma.com/design/${fileKey}?node-id=${encodeURIComponent(s.nodeId)}`
-        : `node-id: ${s.nodeId}`
+        ? `https://www.figma.com/design/${fileKey}?node-id=${encodeURIComponent(s.parentId)}`
+        : `node-id: ${s.parentId}`
       return `${i + 1}. ${link}\nБыло: ${s.original}\nСтало: ${s.suggested}\n${s.reason}`
     })
     return `Изменения текстов — ${date}\n\n${lines.join('\n\n')}`
@@ -140,7 +140,7 @@ export default function App() {
           />
         )}
         {tab === 'summary' && (
-          <SummaryTab summary={buildSummary()} />
+          <SummaryTab summary={buildSummary()} hasSuggestions={suggestions.length > 0} />
         )}
         {tab === 'rules' && (
           <RulesTab
@@ -187,22 +187,28 @@ function RulesTab({ rules, apiKey, onRulesChange, onApiKeyChange, scope, onScope
         />
       </div>
       <div style={styles.optionsBlock}>
-        <SegmentedToggle
-          value={scope}
-          onChange={onScopeChange}
-          options={[
-            { value: 'page', label: 'Текущая страница' },
-            { value: 'selection', label: 'Только выделенное' },
-          ]}
-        />
-        <SegmentedToggle
-          value={onlyVisible ? 'visible' : 'all'}
-          onChange={(v) => onOnlyVisibleChange(v === 'visible')}
-          options={[
-            { value: 'all', label: 'Все элементы' },
-            { value: 'visible', label: 'Только видимые' },
-          ]}
-        />
+        <div style={{ ...styles.fieldGroup, flex: 1 }}>
+          <label style={styles.label}>Область сканирования</label>
+          <Select
+            value={scope}
+            onChange={onScopeChange}
+            options={[
+              { value: 'page', label: 'Текущая страница' },
+              { value: 'selection', label: 'Только выделенное' },
+            ]}
+          />
+        </div>
+        <div style={{ ...styles.fieldGroup, flex: 1 }}>
+          <label style={styles.label}>Видимость элементов</label>
+          <Select
+            value={onlyVisible ? 'visible' : 'all'}
+            onChange={(v) => onOnlyVisibleChange(v === 'visible')}
+            options={[
+              { value: 'all', label: 'Все элементы' },
+              { value: 'visible', label: 'Только видимые' },
+            ]}
+          />
+        </div>
       </div>
       <div style={{ ...styles.fieldGroup, flex: 1 }}>
         <label style={styles.label}>Правила и Tone of Voice</label>
@@ -224,18 +230,12 @@ function ScanTab({ state, progress, error, onStart, onRetry }: {
 }) {
   return (
     <div style={{ ...styles.section, alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-      {state === 'idle' && (
+      {(state === 'idle' || state === 'done') && (
         <button style={styles.primary} onClick={onStart}>Проверить</button>
       )}
       {state === 'scanning' && <Spinner label="Сканирование текстов..." />}
       {state === 'checking' && (
         <Spinner label={`Проверка ${progress.done} / ${progress.total}`} labelStyle={styles.status} />
-      )}
-      {state === 'done' && (
-        <>
-          <p style={styles.status}>Проверка завершена</p>
-          <button style={styles.secondary} onClick={onRetry}>Проверить снова</button>
-        </>
       )}
       {state === 'error' && (
         <>
@@ -258,15 +258,15 @@ function ResultsTab({ suggestions, onNavigate, onAccept, onSkip, onAcceptAll }: 
   const accepted = suggestions.filter((s) => s.accepted)
 
   if (suggestions.length === 0) {
-    return <div style={{ ...styles.section, alignItems: 'center', justifyContent: 'center' }}>
+    return <div style={{ ...styles.section, padding: '0 12px', alignItems: 'center', justifyContent: 'center' }}>
       <p style={{ ...styles.status, fontSize: 12 }}>Нет предложений. Запустите проверку.</p>
     </div>
   }
 
   return (
-    <div style={styles.section}>
+    <div style={{ ...styles.section, padding: '0 12px' }}>
       <div style={styles.resultsHeader}>
-        <span style={styles.hint}>{pending.length} ожидают · {accepted.length} принято</span>
+        <span style={styles.status}>{pending.length} ожидают · {accepted.length} принято</span>
         {pending.length > 0 && <button style={styles.secondary} onClick={onAcceptAll}>Принять все</button>}
       </div>
       <div style={styles.list}>
@@ -347,7 +347,7 @@ function copyToClipboard(text: string) {
   document.body.removeChild(ta)
 }
 
-function SummaryTab({ summary }: { summary: string }) {
+function SummaryTab({ summary, hasSuggestions }: { summary: string; hasSuggestions: boolean }) {
   const [copied, setCopied] = useState(false)
 
   function copy() {
@@ -357,8 +357,8 @@ function SummaryTab({ summary }: { summary: string }) {
   }
 
   if (!summary) {
-    return <div style={{ ...styles.section, alignItems: 'center', padding: 32 }}>
-      <p style={styles.status}>Нет принятых изменений</p>
+    return <div style={{ ...styles.section, alignItems: 'center', justifyContent: 'center' }}>
+      <p style={styles.status}>{hasSuggestions ? 'Нет принятых изменений' : 'Нет предложений. Запустите проверку.'}</p>
     </div>
   }
 
@@ -379,22 +379,44 @@ function Spinner({ label, labelStyle }: { label: string; labelStyle?: React.CSSP
   )
 }
 
-function SegmentedToggle<T extends string>({ value, onChange, options }: {
+function Select<T extends string>({ value, onChange, options }: {
   value: T
   onChange: (v: T) => void
   options: { value: T; label: string }[]
 }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const current = options.find((o) => o.value === value)
+
+  useEffect(() => {
+    if (!open) return
+    function onClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [open])
+
   return (
-    <div style={styles.toggleGroup}>
-      {options.map((opt) => (
-        <button
-          key={opt.value}
-          style={{ ...styles.toggleBtn, ...(value === opt.value ? styles.toggleActive : {}) }}
-          onClick={() => onChange(opt.value)}
-        >
-          {opt.label}
-        </button>
-      ))}
+    <div ref={ref} style={styles.selectWrap}>
+      <button type="button" style={styles.select} onClick={() => setOpen((o) => !o)}>
+        <span>{current?.label}</span>
+        <span style={styles.selectArrow}>▾</span>
+      </button>
+      {open && (
+        <div style={styles.selectMenu}>
+          {options.map((opt) => (
+            <div
+              key={opt.value}
+              className="select-option"
+              style={{ ...styles.selectOption, ...(opt.value === value ? styles.selectOptionActive : {}) }}
+              onClick={() => { onChange(opt.value); setOpen(false) }}
+            >
+              {opt.label}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -404,21 +426,24 @@ const styles: Record<string, React.CSSProperties> = {
   nav: { display: 'flex', gap: 2, margin: '12px 12px 0', padding: 4, background: '#F2F3F5', borderRadius: 12 },
   navBtn: { flex: 1, padding: '8px 4px', border: 'none', background: 'transparent', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#111827', transition: 'background 0.15s, color 0.15s' },
   navActive: { background: '#fff', color: '#111827', boxShadow: '0 1px 3px rgba(16,24,40,0.12), 0 1px 2px rgba(16,24,40,0.08)' },
-  content: { flex: 1, overflow: 'auto', padding: 12, display: 'flex', flexDirection: 'column' },
-  section: { display: 'flex', flexDirection: 'column', padding: 16, gap: 16, height: '100%', boxSizing: 'border-box', background: '#fff', border: '1px solid #E5E7EB', borderRadius: 14, boxShadow: '0 1px 2px rgba(16,24,40,0.04)' },
+  content: { flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' },
+  section: { display: 'flex', flexDirection: 'column', padding: 16, gap: 16, height: '100%', boxSizing: 'border-box', background: '#fff' },
   label: { fontWeight: 600, fontSize: 12, color: '#374151', marginBottom: 2 },
   input: { border: '1px solid #E5E7EB', background: '#F9FAFB', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box', color: '#111827' },
   textarea: { border: '1px solid #E5E7EB', background: '#F9FAFB', borderRadius: 10, padding: '10px 12px', fontSize: 13, resize: 'vertical', minHeight: 240, outline: 'none', lineHeight: 1.6, width: '100%', boxSizing: 'border-box', color: '#111827' },
   textareaGrow: { border: '1px solid #E5E7EB', background: '#F9FAFB', borderRadius: 10, padding: '10px 12px', fontSize: 13, resize: 'none', outline: 'none', lineHeight: 1.6, width: '100%', boxSizing: 'border-box', color: '#111827', flex: 1 },
   hint: { fontSize: 12, color: '#9CA3AF', margin: 0 },
-  status: { fontSize: 14, color: '#111827', margin: 0 },
+  status: { fontSize: 12, color: '#111827', margin: 0 },
   link: { fontSize: 12, color: '#4D6BFE', textDecoration: 'none', fontWeight: 500 },
   fieldHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   fieldGroup: { display: 'flex', flexDirection: 'column', gap: 8 },
-  optionsBlock: { display: 'flex', flexDirection: 'column', gap: 6, width: '100%' },
-  toggleGroup: { display: 'flex', gap: 2, padding: 4, background: '#F2F3F5', borderRadius: 12 },
-  toggleBtn: { flex: 1, padding: '8px 4px', border: 'none', background: 'transparent', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#111827', transition: 'background 0.15s, color 0.15s' },
-  toggleActive: { background: '#fff', color: '#111827', boxShadow: '0 1px 3px rgba(16,24,40,0.12), 0 1px 2px rgba(16,24,40,0.08)' },
+  optionsBlock: { display: 'flex', flexDirection: 'row', gap: 8, width: '100%' },
+  selectWrap: { position: 'relative', flex: 1 },
+  select: { border: '1px solid #E5E7EB', background: '#F9FAFB', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box', color: '#111827', fontFamily: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, textAlign: 'left' },
+  selectArrow: { fontSize: 10, color: '#9CA3AF' },
+  selectMenu: { position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: '#fff', border: '1px solid #E5E7EB', borderRadius: 10, boxShadow: '0 4px 12px rgba(16,24,40,0.12)', padding: 4, zIndex: 10 },
+  selectOption: { padding: '8px 10px', borderRadius: 8, fontSize: 13, color: '#111827', cursor: 'pointer' },
+  selectOptionActive: { background: 'rgba(77,107,254,0.08)', color: '#4D6BFE', fontWeight: 600 },
   primary: { background: '#4D6BFE', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', cursor: 'pointer', fontWeight: 600, fontSize: 13, boxShadow: '0 1px 2px rgba(16,24,40,0.06)' },
   secondary: { background: '#fff', color: '#374151', border: '1px solid #E5E7EB', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 500 },
   resultsHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
@@ -428,14 +453,14 @@ const styles: Record<string, React.CSSProperties> = {
   frameName: { fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: 0.5 },
   navArrow: { fontSize: 11, color: '#4D6BFE' },
   diff: { display: 'flex', flexDirection: 'column', gap: 4 },
-  diffOld: { background: '#FEF2F2', borderRadius: 8, padding: '6px 8px', fontSize: 13, color: '#B42318', borderLeft: '3px solid #F97066', lineHeight: 1.5 },
-  diffNew: { background: '#ECFDF3', borderRadius: 8, padding: '6px 8px', fontSize: 13, color: '#067647', borderLeft: '3px solid #17B26A', lineHeight: 1.5 },
-  diffLabel: { fontSize: 10, fontWeight: 700, marginRight: 6, opacity: 0.6, textTransform: 'uppercase' },
-  diffOldMark: { background: '#FEE4E2', color: '#912018', borderRadius: 3, padding: '0 2px', textDecoration: 'line-through' },
-  diffNewMark: { background: '#D1FADF', color: '#05603A', borderRadius: 3, padding: '0 2px', fontWeight: 700 },
-  reason: { fontSize: 11, color: '#9CA3AF' },
+  diffOld: { background: '#F9FAFB', borderRadius: 8, padding: '6px 8px', fontSize: 13, color: '#111827', lineHeight: 1.5 },
+  diffNew: { background: '#F9FAFB', borderRadius: 8, padding: '6px 8px', fontSize: 13, color: '#111827', lineHeight: 1.5 },
+  diffLabel: { fontSize: 10, fontWeight: 700, marginRight: 6, color: '#9CA3AF', textTransform: 'uppercase' },
+  diffOldMark: { background: 'rgba(156,163,175,0.2)', color: '#9CA3AF', textDecoration: 'line-through', borderRadius: 3, padding: '0 2px' },
+  diffNewMark: { background: 'rgba(77,107,254,0.12)', color: '#4D6BFE', fontWeight: 700, borderRadius: 3, padding: '0 2px' },
+  reason: { fontSize: 11, color: '#111827' },
   cardActions: { display: 'flex', gap: 8 },
-  acceptBtn: { flex: 1, background: '#ECFDF3', color: '#067647', border: '1px solid #ABEFC6', borderRadius: 8, padding: '6px', cursor: 'pointer', fontWeight: 600, fontSize: 12 },
+  acceptBtn: { flex: 1, background: '#4D6BFE', color: '#fff', border: 'none', borderRadius: 8, padding: '6px', cursor: 'pointer', fontWeight: 600, fontSize: 12 },
   skipBtn: { flex: 1, background: '#fff', color: '#6B7280', border: '1px solid #E5E7EB', borderRadius: 8, padding: '6px', cursor: 'pointer', fontSize: 12 },
   statusDone: { fontSize: 12, color: '#067647', fontWeight: 600 },
   statusSkip: { fontSize: 12, color: '#9CA3AF' },

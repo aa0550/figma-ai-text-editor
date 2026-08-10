@@ -2,6 +2,7 @@ export interface TextNode {
   id: string
   text: string
   parentName: string
+  parentId: string
   pageName: string
 }
 
@@ -11,6 +12,7 @@ export interface Suggestion {
   suggested: string
   reason: string
   parentName: string
+  parentId: string
   pageName: string
   accepted?: boolean
   skipped?: boolean

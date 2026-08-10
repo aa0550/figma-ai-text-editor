@@ -273,8 +273,8 @@ function ResultsTab({ suggestions, onNavigate, onAccept, onSkip, onAcceptAll }: 
   const accepted = suggestions.filter((s) => s.accepted)
 
   if (suggestions.length === 0) {
-    return <div style={{ ...styles.section, padding: '0 12px', alignItems: 'center', justifyContent: 'center' }}>
-      <p style={{ ...styles.status, fontSize: 12 }}>Нет предложений. Запустите проверку.</p>
+    return <div style={{ ...styles.section, padding: '0 16px', alignItems: 'center', justifyContent: 'center' }}>
+      <p style={{ ...styles.status, fontSize: 12, textAlign: 'center' }}>Нет предложений. Запустите проверку.</p>
     </div>
   }
 
@@ -372,8 +372,8 @@ function SummaryTab({ summary, hasSuggestions }: { summary: string; hasSuggestio
   }
 
   if (!summary) {
-    return <div style={{ ...styles.section, alignItems: 'center', justifyContent: 'center' }}>
-      <p style={hasSuggestions ? { ...styles.status, fontSize: 13 } : styles.status}>{hasSuggestions ? 'Нет принятых изменений' : 'Нет предложений. Запустите проверку.'}</p>
+    return <div style={{ ...styles.section, padding: '0 16px', alignItems: 'center', justifyContent: 'center' }}>
+      <p style={{ ...(hasSuggestions ? { ...styles.status, fontSize: 13 } : { ...styles.status, fontSize: 12 }), textAlign: 'center' }}>{hasSuggestions ? 'Нет принятых изменений' : 'Нет предложений. Запустите проверку.'}</p>
     </div>
   }
 
@@ -442,16 +442,16 @@ const styles: Record<string, React.CSSProperties> = {
   navBtn: { flex: 1, padding: '8px 4px', border: 'none', background: 'transparent', borderRadius: 7, cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#1E1E1E', transition: 'background 0.15s, color 0.15s' },
   navActive: { background: '#fff', color: '#1E1E1E', boxShadow: '0 1px 2px rgba(0,0,0,0.15)' },
   content: { flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' },
-  section: { display: 'flex', flexDirection: 'column', padding: 16, gap: 16, height: '100%', boxSizing: 'border-box', background: '#fff' },
+  section: { display: 'flex', flexDirection: 'column', padding: '0 16px 16px', gap: 16, height: '100%', boxSizing: 'border-box', background: '#fff' },
   label: { fontWeight: 600, fontSize: 12, color: '#1E1E1E', marginBottom: 2 },
-  input: { border: '1px solid #E6E6E6', background: '#F5F5F5', borderRadius: 7, padding: '9px 11px', fontSize: 12, outline: 'none', width: '100%', boxSizing: 'border-box', color: '#1E1E1E' },
-  textarea: { border: '1px solid #E6E6E6', background: '#F5F5F5', borderRadius: 7, padding: '10px 11px', fontSize: 12, resize: 'vertical', minHeight: 240, outline: 'none', lineHeight: 1.6, width: '100%', boxSizing: 'border-box', color: '#1E1E1E' },
-  textareaGrow: { border: '1px solid #E6E6E6', background: '#F5F5F5', borderRadius: 7, padding: '10px 11px', fontSize: 12, resize: 'none', outline: 'none', lineHeight: 1.6, width: '100%', boxSizing: 'border-box', color: '#1E1E1E', flex: 1 },
+  input: { border: '1px solid #E6E6E6', background: '#F5F5F5', borderRadius: 7, padding: '9px 11px', fontSize: 12, fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box', color: '#1E1E1E' },
+  textarea: { border: '1px solid #E6E6E6', background: '#F5F5F5', borderRadius: 7, padding: '10px 11px', fontSize: 12, fontFamily: 'inherit', resize: 'vertical', minHeight: 240, outline: 'none', lineHeight: 1.6, width: '100%', boxSizing: 'border-box', color: '#1E1E1E' },
+  textareaGrow: { border: '1px solid #E6E6E6', background: '#F5F5F5', borderRadius: 7, padding: '10px 11px', fontSize: 12, fontFamily: 'inherit', resize: 'none', outline: 'none', lineHeight: 1.6, width: '100%', boxSizing: 'border-box', color: '#1E1E1E', flex: 1 },
   hint: { fontSize: 12, color: '#8C8C8C', margin: 0 },
   status: { fontSize: 12, color: '#1E1E1E', margin: 0 },
-  link: { fontSize: 12, color: '#0D99FF', textDecoration: 'none', fontWeight: 500, marginTop: -1 },
+  link: { fontSize: 12, color: '#0D99FF', textDecoration: 'none', fontWeight: 500, marginTop: -2 },
   fieldHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  fieldGroup: { display: 'flex', flexDirection: 'column', gap: 6 },
+  fieldGroup: { display: 'flex', flexDirection: 'column', gap: 4 },
   optionsBlock: { display: 'flex', flexDirection: 'row', gap: 8, width: '100%' },
   selectWrap: { position: 'relative', flex: 1 },
   select: { border: '1px solid #E6E6E6', background: '#F5F5F5', borderRadius: 7, padding: '9px 11px', fontSize: 12, outline: 'none', width: '100%', boxSizing: 'border-box', color: '#1E1E1E', fontFamily: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, textAlign: 'left' },

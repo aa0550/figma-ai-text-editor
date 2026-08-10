@@ -104,6 +104,10 @@ export default function App() {
     updateSuggestion(s.nodeId, { skipped: true, accepted: false })
   }
 
+  function undoSkip(s: Suggestion) {
+    updateSuggestion(s.nodeId, { skipped: false })
+  }
+
   function acceptAll() {
     const pending = suggestions.filter((s) => !s.skipped)
     sendMessage({ type: 'apply-all', changes: pending.map((s) => ({ nodeId: s.nodeId, newText: s.suggested })) })
@@ -155,6 +159,7 @@ export default function App() {
             onAccept={acceptChange}
             onUndo={undoAccept}
             onSkip={skipChange}
+            onUndoSkip={undoSkip}
             onAcceptAll={acceptAll}
           />
         )}
@@ -255,7 +260,7 @@ function ScanTab({ state, progress, error, onStart, onStop, onRetry }: {
       {state === 'scanning' && <Spinner />}
       {state === 'checking' && (
         <>
-          <Spinner label={`Проверка ${progress.done} / ${progress.total}`} labelStyle={styles.status} />
+          <Spinner label={`Проверка ${progress.done} / ${progress.total}`} labelStyle={{ ...styles.status, fontWeight: 500 }} />
           <button className="btn-secondary" style={styles.secondary} onClick={onStop}>Остановить</button>
         </>
       )}
@@ -269,12 +274,13 @@ function ScanTab({ state, progress, error, onStart, onStop, onRetry }: {
   )
 }
 
-function ResultsTab({ suggestions, onNavigate, onAccept, onUndo, onSkip, onAcceptAll }: {
+function ResultsTab({ suggestions, onNavigate, onAccept, onUndo, onSkip, onUndoSkip, onAcceptAll }: {
   suggestions: Suggestion[]
   onNavigate: (s: Suggestion) => void
   onAccept: (s: Suggestion) => void
   onUndo: (s: Suggestion) => void
   onSkip: (s: Suggestion) => void
+  onUndoSkip: (s: Suggestion) => void
   onAcceptAll: () => void
 }) {
   const pending = suggestions.filter((s) => !s.accepted && !s.skipped)
@@ -289,7 +295,7 @@ function ResultsTab({ suggestions, onNavigate, onAccept, onUndo, onSkip, onAccep
   return (
     <div style={styles.section}>
       <div style={styles.resultsHeader}>
-        <span style={{ ...styles.status, fontWeight: 700 }}>{pending.length} ожидают · {accepted.length} принято</span>
+        <span style={{ ...styles.status, fontWeight: 500 }}>{pending.length} ожидают · {accepted.length} принято</span>
       </div>
       <div style={styles.list}>
         {suggestions.map((s) => (
@@ -300,6 +306,7 @@ function ResultsTab({ suggestions, onNavigate, onAccept, onUndo, onSkip, onAccep
             onAccept={() => onAccept(s)}
             onUndo={() => onUndo(s)}
             onSkip={() => onSkip(s)}
+            onUndoSkip={() => onUndoSkip(s)}
           />
         ))}
       </div>
@@ -325,8 +332,8 @@ function diffParts(a: string, b: string) {
   }
 }
 
-function SuggestionCard({ suggestion: s, onNavigate, onAccept, onUndo, onSkip }: {
-  suggestion: Suggestion; onNavigate: () => void; onAccept: () => void; onUndo: () => void; onSkip: () => void
+function SuggestionCard({ suggestion: s, onNavigate, onAccept, onUndo, onSkip, onUndoSkip }: {
+  suggestion: Suggestion; onNavigate: () => void; onAccept: () => void; onUndo: () => void; onSkip: () => void; onUndoSkip: () => void
 }) {
   const isDone = s.accepted || s.skipped
   const { prefix, oldMid, newMid, suffix } = diffParts(s.original, s.suggested)
@@ -334,7 +341,7 @@ function SuggestionCard({ suggestion: s, onNavigate, onAccept, onUndo, onSkip }:
     <div style={{ ...styles.card, opacity: isDone ? 0.5 : 1 }}>
       <div style={styles.cardMeta} onClick={onNavigate}>
         <span style={styles.frameName}>{s.parentName}</span>
-        <span style={styles.navArrow}>→</span>
+        <span className="card-arrow" style={styles.navArrow}>→</span>
       </div>
       <div style={styles.diff}>
         <p style={styles.diffLine}>Было: {prefix}<span style={{ textDecoration: 'line-through' }}>{oldMid}</span>{suffix}</p>
@@ -353,7 +360,12 @@ function SuggestionCard({ suggestion: s, onNavigate, onAccept, onUndo, onSkip }:
           <button className="btn-undo" style={styles.undoBtn} onClick={onUndo}>Отменить</button>
         </div>
       )}
-      {s.skipped && <div style={styles.statusSkip}>Пропущено</div>}
+      {s.skipped && (
+        <div style={styles.doneRow}>
+          <span style={styles.statusSkip}>Пропущено</span>
+          <button className="btn-undo" style={styles.undoBtn} onClick={onUndoSkip}>Отменить</button>
+        </div>
+      )}
     </div>
   )
 }
@@ -447,14 +459,14 @@ function Select<T extends string>({ value, onChange, options }: {
 const styles: Record<string, React.CSSProperties> = {
   root: { display: 'flex', flexDirection: 'column', height: '100vh', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontSize: 12, color: '#000000', background: '#fff' },
   nav: { display: 'flex', gap: 2, margin: '16px', padding: 4, background: '#F2F2F2', borderRadius: 9 },
-  navBtn: { flex: 1, padding: '8px 4px', border: 'none', background: 'transparent', borderRadius: 7, cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#000000', transition: 'background 0.15s, color 0.15s' },
+  navBtn: { flex: 1, padding: '8px 4px', border: 'none', background: 'transparent', borderRadius: 7, cursor: 'pointer', fontSize: 12, fontWeight: 500, color: '#000000', transition: 'background 0.15s, color 0.15s' },
   navActive: { background: '#fff', color: '#000000', boxShadow: '0 1px 2px rgba(0,0,0,0.15)' },
   content: { flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' },
   section: { display: 'flex', flexDirection: 'column', padding: '0 16px 16px', gap: 16, height: '100%', boxSizing: 'border-box', background: '#fff' },
-  label: { fontWeight: 600, fontSize: 12, lineHeight: 1.3, color: '#000000', marginBottom: 2 },
+  label: { fontWeight: 500, fontSize: 12, lineHeight: 1.3, color: '#000000', marginBottom: 2 },
   input: { border: '1px solid #E6E6E6', background: '#F5F5F5', borderRadius: 7, padding: '9px 11px', fontSize: 12, lineHeight: 1.3, fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box', color: '#000000' },
   textarea: { border: '1px solid #E6E6E6', background: '#F5F5F5', borderRadius: 7, padding: '10px 11px', fontSize: 12, fontFamily: 'inherit', resize: 'vertical', minHeight: 240, outline: 'none', lineHeight: 1.6, width: '100%', boxSizing: 'border-box', color: '#000000' },
-  textareaGrow: { border: '1px solid #E6E6E6', background: '#F5F5F5', borderRadius: 7, padding: '10px 11px', fontSize: 12, fontFamily: 'inherit', resize: 'none', outline: 'none', lineHeight: 1.3, width: '100%', boxSizing: 'border-box', color: '#000000', flex: 1 },
+  textareaGrow: { border: '1px solid #E6E6E6', background: '#F5F5F5', borderRadius: 7, padding: '10px 11px', fontSize: 12, fontFamily: 'inherit', resize: 'none', outline: 'none', lineHeight: '18px', width: '100%', boxSizing: 'border-box', color: '#000000', flex: 1 },
   hint: { fontSize: 12, color: '#8C8C8C', margin: 0 },
   status: { fontSize: 12, color: '#000000', margin: 0 },
   link: { fontSize: 12, lineHeight: 1.3, color: '#8C8C8C', textDecoration: 'none', fontWeight: 500, marginTop: -2 },
@@ -467,24 +479,24 @@ const styles: Record<string, React.CSSProperties> = {
   selectMenu: { position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: '#fff', border: '1px solid #E6E6E6', borderRadius: 7, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', padding: 4, zIndex: 10 },
   selectOption: { padding: '8px 9px', borderRadius: 5, fontSize: 12, lineHeight: 1.3, color: '#000000', cursor: 'pointer' },
   selectOptionActive: { background: '#F0F0F0', color: '#000000' },
-  primary: { background: '#0D99FF', color: '#fff', border: 'none', borderRadius: 7, padding: '9px 18px', cursor: 'pointer', fontWeight: 600, fontSize: 12 },
+  primary: { background: '#0D99FF', color: '#fff', border: 'none', borderRadius: 7, padding: '9px 18px', cursor: 'pointer', fontWeight: 500, fontSize: 12 },
   secondary: { background: '#fff', color: '#000000', border: '1px solid #E6E6E6', borderRadius: 7, padding: '8px 13px', cursor: 'pointer', fontSize: 12, fontWeight: 500 },
   resultsHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   list: { display: 'flex', flexDirection: 'column', gap: 8, overflow: 'auto', background: '#F2F2F2', borderTop: '1px solid #E6E6E6', borderBottom: '1px solid #E6E6E6', margin: '0 -16px', padding: '8px 16px' },
   card: { border: '1px solid #E6E6E6', borderRadius: 7, padding: 13, display: 'flex', flexDirection: 'column', gap: 8, transition: 'opacity 0.2s', background: '#fff' },
   cardMeta: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' },
-  frameName: { fontSize: 12, lineHeight: 1.3, fontWeight: 600, color: '#000000', textTransform: 'uppercase', letterSpacing: 0.5 },
+  frameName: { fontSize: 12, lineHeight: 1.3, fontWeight: 500, color: '#000000', textTransform: 'uppercase', letterSpacing: 0.5 },
   navArrow: { fontSize: 12, color: '#0D99FF' },
   diff: { display: 'flex', flexDirection: 'column', gap: 4 },
   diffLine: { fontSize: 12, color: '#000000', lineHeight: 1.4, margin: 0 },
   reason: { fontSize: 12, color: '#000000', lineHeight: 1.4, margin: 0 },
   cardActions: { display: 'flex', gap: 8 },
-  acceptBtn: { flex: 1, background: '#0D99FF', color: '#fff', border: 'none', borderRadius: 7, padding: '7px', cursor: 'pointer', fontWeight: 600, fontSize: 12 },
+  acceptBtn: { flex: 1, background: '#0D99FF', color: '#fff', border: 'none', borderRadius: 7, padding: '7px', cursor: 'pointer', fontWeight: 500, fontSize: 12 },
   skipBtn: { flex: 1, background: '#fff', color: '#000000', border: '1px solid #E6E6E6', borderRadius: 7, padding: '7px', cursor: 'pointer', fontSize: 12 },
-  statusDone: { fontSize: 12, color: '#14AE5C', fontWeight: 600 },
+  statusDone: { fontSize: 12, color: '#14AE5C', fontWeight: 500 },
   statusSkip: { fontSize: 12, color: '#8C8C8C' },
   doneRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  undoBtn: { background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', fontSize: 12, color: '#8C8C8C', textDecoration: 'underline', fontWeight: 500 },
+  undoBtn: { background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', fontSize: 12, color: '#8C8C8C', textDecoration: 'none', fontWeight: 500 },
   summaryBox: { background: '#F5F5F5', border: '1px solid #E6E6E6', borderRadius: 7, padding: 13, fontSize: 12, lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word', flex: 1, overflow: 'auto', margin: 0, color: '#000000' },
   spinner: { width: 26, height: 26, border: '3px solid #E6E6E6', borderTop: '3px solid #0D99FF', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' },
 }

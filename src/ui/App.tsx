@@ -279,7 +279,7 @@ function ResultsTab({ suggestions, onNavigate, onAccept, onSkip, onAcceptAll }: 
   }
 
   return (
-    <div style={{ ...styles.section, padding: '16px 12px 0' }}>
+    <div style={{ ...styles.section, padding: '16px 12px' }}>
       <div style={styles.resultsHeader}>
         <span style={styles.status}>{pending.length} ожидают · {accepted.length} принято</span>
       </div>

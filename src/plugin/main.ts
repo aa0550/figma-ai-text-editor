@@ -132,6 +132,8 @@ figma.ui.onmessage = async (msg) => {
 
     figma.currentPage.selection = [node]
     figma.viewport.scrollAndZoomIntoView([node])
-    figma.notify('Саммари вставлено на страницу ✓')
+
+    const check = links.map((l) => JSON.stringify(node.getRangeHyperlink(l.start, l.end)))
+    figma.notify(`Саммари вставлено ✓ | link check: ${check.join(' | ')}`)
   }
 }

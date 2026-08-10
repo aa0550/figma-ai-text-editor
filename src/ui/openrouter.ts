@@ -1,7 +1,7 @@
 import type { TextNode, Suggestion } from '../shared/types'
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
-const MODEL = 'inclusionai/ling-3.0-tiny:free'
+const MODEL = 'google/gemini-2.0-flash-001'
 
 export async function checkTextsWithAI(
   nodes: TextNode[],

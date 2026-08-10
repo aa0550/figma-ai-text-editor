@@ -5,7 +5,7 @@ figma.showUI(__html__, { width: 480, height: 640, title: 'AI Text Editor' })
 function getParentFrame(node: BaseNode): BaseNode | null {
   let current: BaseNode | null = node.parent
   while (current) {
-    if (current.type === 'FRAME' || current.type === 'COMPONENT' || current.type === 'COMPONENT_SET') {
+    if (current.type === 'FRAME' || current.type === 'COMPONENT' || current.type === 'COMPONENT_SET' || current.type === 'INSTANCE') {
       return current
     }
     current = current.parent

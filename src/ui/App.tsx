@@ -264,7 +264,7 @@ function ResultsTab({ suggestions, onNavigate, onAccept, onSkip, onAcceptAll }: 
   }
 
   return (
-    <div style={{ ...styles.section, padding: '0 12px' }}>
+    <div style={{ ...styles.section, padding: '12px 12px 0' }}>
       <div style={styles.resultsHeader}>
         <span style={styles.status}>{pending.length} ожидают · {accepted.length} принято</span>
         {pending.length > 0 && <button style={styles.secondary} onClick={onAcceptAll}>Принять все</button>}
@@ -434,9 +434,9 @@ const styles: Record<string, React.CSSProperties> = {
   textareaGrow: { border: '1px solid #E5E7EB', background: '#F9FAFB', borderRadius: 10, padding: '10px 12px', fontSize: 13, resize: 'none', outline: 'none', lineHeight: 1.6, width: '100%', boxSizing: 'border-box', color: '#111827', flex: 1 },
   hint: { fontSize: 12, color: '#9CA3AF', margin: 0 },
   status: { fontSize: 12, color: '#111827', margin: 0 },
-  link: { fontSize: 12, color: '#4D6BFE', textDecoration: 'none', fontWeight: 500 },
+  link: { fontSize: 12, color: '#4D6BFE', textDecoration: 'none', fontWeight: 500, marginTop: -1 },
   fieldHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  fieldGroup: { display: 'flex', flexDirection: 'column', gap: 8 },
+  fieldGroup: { display: 'flex', flexDirection: 'column', gap: 6 },
   optionsBlock: { display: 'flex', flexDirection: 'row', gap: 8, width: '100%' },
   selectWrap: { position: 'relative', flex: 1 },
   select: { border: '1px solid #E5E7EB', background: '#F9FAFB', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box', color: '#111827', fontFamily: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, textAlign: 'left' },
@@ -446,7 +446,7 @@ const styles: Record<string, React.CSSProperties> = {
   selectOptionActive: { background: 'rgba(77,107,254,0.08)', color: '#4D6BFE', fontWeight: 600 },
   primary: { background: '#4D6BFE', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', cursor: 'pointer', fontWeight: 600, fontSize: 13, boxShadow: '0 1px 2px rgba(16,24,40,0.06)' },
   secondary: { background: '#fff', color: '#374151', border: '1px solid #E5E7EB', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 500 },
-  resultsHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  resultsHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   list: { display: 'flex', flexDirection: 'column', gap: 10, overflow: 'auto' },
   card: { border: '1px solid #E5E7EB', borderRadius: 12, padding: 14, display: 'flex', flexDirection: 'column', gap: 8, transition: 'opacity 0.2s', background: '#fff', boxShadow: '0 1px 2px rgba(16,24,40,0.04)' },
   cardMeta: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' },

@@ -438,7 +438,7 @@ function Select<T extends string>({ value, onChange, options }: {
 
 const styles: Record<string, React.CSSProperties> = {
   root: { display: 'flex', flexDirection: 'column', height: '100vh', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontSize: 12, color: '#1E1E1E', background: '#fff' },
-  nav: { display: 'flex', gap: 2, margin: '12px 12px 0', padding: 4, background: '#F2F2F2', borderRadius: 9 },
+  nav: { display: 'flex', gap: 2, margin: '16px', padding: 4, background: '#F2F2F2', borderRadius: 9 },
   navBtn: { flex: 1, padding: '8px 4px', border: 'none', background: 'transparent', borderRadius: 7, cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#1E1E1E', transition: 'background 0.15s, color 0.15s' },
   navActive: { background: '#fff', color: '#1E1E1E', boxShadow: '0 1px 2px rgba(0,0,0,0.15)' },
   content: { flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' },

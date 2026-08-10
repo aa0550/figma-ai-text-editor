@@ -279,7 +279,7 @@ function ResultsTab({ suggestions, onNavigate, onAccept, onSkip, onAcceptAll }: 
   }
 
   return (
-    <div style={{ ...styles.section, padding: '12px 12px 0' }}>
+    <div style={{ ...styles.section, padding: '16px 12px 0' }}>
       <div style={styles.resultsHeader}>
         <span style={styles.status}>{pending.length} ожидают · {accepted.length} принято</span>
       </div>
@@ -461,7 +461,7 @@ const styles: Record<string, React.CSSProperties> = {
   selectOptionActive: { background: 'rgba(13,153,255,0.1)', color: '#0D99FF', fontWeight: 600 },
   primary: { background: '#0D99FF', color: '#fff', border: 'none', borderRadius: 7, padding: '9px 18px', cursor: 'pointer', fontWeight: 600, fontSize: 12 },
   secondary: { background: '#fff', color: '#1E1E1E', border: '1px solid #E6E6E6', borderRadius: 7, padding: '8px 13px', cursor: 'pointer', fontSize: 12, fontWeight: 500 },
-  resultsHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  resultsHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   list: { display: 'flex', flexDirection: 'column', gap: 8, overflow: 'auto' },
   card: { border: '1px solid #E6E6E6', borderRadius: 7, padding: 13, display: 'flex', flexDirection: 'column', gap: 8, transition: 'opacity 0.2s', background: '#fff' },
   cardMeta: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' },

@@ -1,5 +1,7 @@
 /// <reference types="@figma/plugin-typings" />
 
+import type { SummaryItem } from '../shared/types'
+
 figma.showUI(__html__, { width: 480, height: 640, title: 'AI Text Editor' })
 
 function getParentFrame(node: BaseNode): BaseNode | null {
@@ -96,5 +98,38 @@ figma.ui.onmessage = async (msg) => {
 
   if (msg.type === 'get-file-key') {
     figma.ui.postMessage({ type: 'file-key', key: figma.fileKey ?? null })
+  }
+
+  if (msg.type === 'insert-summary') {
+    await figma.loadFontAsync({ family: 'Inter', style: 'Regular' })
+    const node = figma.createText()
+    node.fontName = { family: 'Inter', style: 'Regular' }
+    node.fontSize = 14
+
+    let text = ''
+    const links: { start: number; end: number; nodeId: string }[] = []
+
+    msg.items.forEach((item: SummaryItem, i: number) => {
+      const prefix = `${i + 1}. Экран `
+      const label = `«${item.parentName}»`
+      const start = text.length + prefix.length
+      links.push({ start, end: start + label.length, nodeId: item.parentId })
+      text += `${prefix}${label}\nБыло: ${item.original}\nСтало: ${item.suggested}\n${item.reason}`
+      if (i < msg.items.length - 1) text += '\n\n'
+    })
+
+    node.characters = text
+    for (const link of links) {
+      node.setRangeHyperlink(link.start, link.end, { type: 'NODE', value: link.nodeId })
+    }
+
+    node.textAutoResize = 'HEIGHT'
+    node.resize(420, node.height)
+    node.x = figma.viewport.center.x - 210
+    node.y = figma.viewport.center.y
+
+    figma.currentPage.selection = [node]
+    figma.viewport.scrollAndZoomIntoView([node])
+    figma.notify('Саммари вставлено на страницу ✓')
   }
 }

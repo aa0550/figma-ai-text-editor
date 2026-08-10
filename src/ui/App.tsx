@@ -164,7 +164,11 @@ export default function App() {
           />
         )}
         {tab === 'summary' && (
-          <SummaryTab summary={buildSummary()} hasSuggestions={suggestions.length > 0} />
+          <SummaryTab
+            summary={buildSummary()}
+            hasSuggestions={suggestions.length > 0}
+            accepted={suggestions.filter((s) => s.accepted)}
+          />
         )}
         {tab === 'rules' && (
           <RulesTab
@@ -382,13 +386,26 @@ function copyToClipboard(text: string) {
   document.body.removeChild(ta)
 }
 
-function SummaryTab({ summary, hasSuggestions }: { summary: string; hasSuggestions: boolean }) {
+function SummaryTab({ summary, hasSuggestions, accepted }: { summary: string; hasSuggestions: boolean; accepted: Suggestion[] }) {
   const [copied, setCopied] = useState(false)
 
   function copy() {
     copyToClipboard(summary)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  function insertToFigma() {
+    sendMessage({
+      type: 'insert-summary',
+      items: accepted.map((s) => ({
+        parentId: s.parentId,
+        parentName: s.parentName,
+        original: s.original,
+        suggested: s.suggested,
+        reason: s.reason,
+      })),
+    })
   }
 
   if (!summary) {
@@ -400,7 +417,10 @@ function SummaryTab({ summary, hasSuggestions }: { summary: string; hasSuggestio
   return (
     <div style={styles.section}>
       <pre style={styles.summaryBox}>{summary}</pre>
-      <button className="btn-secondary" style={styles.secondary} onClick={copy}>{copied ? 'Скопировано!' : 'Копировать'}</button>
+      <div style={styles.cardActions}>
+        <button className="btn-secondary" style={styles.secondary} onClick={copy}>{copied ? 'Скопировано!' : 'Копировать'}</button>
+        <button className="btn-secondary" style={styles.secondary} onClick={insertToFigma}>Вставить в Figma</button>
+      </div>
     </div>
   )
 }

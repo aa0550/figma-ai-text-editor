@@ -20,6 +20,14 @@ export interface Suggestion {
 
 export type ScanScope = 'page' | 'selection'
 
+export interface SummaryItem {
+  parentId: string
+  parentName: string
+  original: string
+  suggested: string
+  reason: string
+}
+
 export type PluginMessage =
   | { type: 'scan-complete'; nodes: TextNode[] }
   | { type: 'navigate-to-node'; nodeId: string }
@@ -38,3 +46,4 @@ export type UIMessage =
   | { type: 'get-file-key' }
   | { type: 'load-storage' }
   | { type: 'save-storage'; key: 'rules' | 'apiKey'; value: string }
+  | { type: 'insert-summary'; items: SummaryItem[] }

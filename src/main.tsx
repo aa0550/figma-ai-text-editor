@@ -9,7 +9,14 @@ style.textContent = `
   body { overflow: hidden; }
   button, select { outline: none; }
   button:focus, select:focus { outline: none; }
-  .select-option:hover { background: rgba(13,153,255,0.1); color: #0D99FF; }
+  button { transition: background-color 0.12s, border-color 0.12s; }
+  .select-option:hover { background: #F0F0F0; color: #1E1E1E; }
+  .select-trigger:hover { background: #EFEFEF !important; }
+  .nav-btn-inactive:hover { background: rgba(0,0,0,0.06) !important; }
+  .btn-primary:hover { background: #0B87E0 !important; }
+  .btn-accept:hover { background: #0B87E0 !important; }
+  .btn-secondary:hover { background: #F5F5F5 !important; }
+  .btn-skip:hover { background: #F5F5F5 !important; }
 `
 document.head.appendChild(style)
 

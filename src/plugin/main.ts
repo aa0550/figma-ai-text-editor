@@ -34,19 +34,33 @@ function collectTextNodes(node: SceneNode, results: { id: string; text: string; 
 }
 
 const STORAGE_KEYS = { rules: 'ux-editor-rules', apiKey: 'ux-editor-api-key' } as const
+const SCAN_OPTIONS_KEYS = { scope: 'ux-editor-scope', onlyVisible: 'ux-editor-only-visible' } as const
 
 figma.ui.onmessage = async (msg) => {
   if (msg.type === 'load-storage') {
-    const [rules, apiKey] = await Promise.all([
+    const [rules, apiKey, scope, onlyVisible] = await Promise.all([
       figma.clientStorage.getAsync(STORAGE_KEYS.rules),
       figma.clientStorage.getAsync(STORAGE_KEYS.apiKey),
+      figma.clientStorage.getAsync(SCAN_OPTIONS_KEYS.scope),
+      figma.clientStorage.getAsync(SCAN_OPTIONS_KEYS.onlyVisible),
     ])
-    figma.ui.postMessage({ type: 'storage-data', rules: rules ?? '', apiKey: apiKey ?? '' })
+    figma.ui.postMessage({
+      type: 'storage-data',
+      rules: rules ?? '',
+      apiKey: apiKey ?? '',
+      scope: scope === 'selection' ? 'selection' : 'page',
+      onlyVisible: onlyVisible ?? true,
+    })
   }
 
   if (msg.type === 'save-storage') {
     const key = msg.key as keyof typeof STORAGE_KEYS
     await figma.clientStorage.setAsync(STORAGE_KEYS[key], msg.value)
+  }
+
+  if (msg.type === 'save-scan-options') {
+    await figma.clientStorage.setAsync(SCAN_OPTIONS_KEYS.scope, msg.scope)
+    await figma.clientStorage.setAsync(SCAN_OPTIONS_KEYS.onlyVisible, msg.onlyVisible)
   }
 
   if (msg.type === 'start-scan') {

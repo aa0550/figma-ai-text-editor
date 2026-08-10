@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import type { Suggestion, TextNode, PluginMessage, ScanScope } from '../shared/types'
 import { usePluginMessage, sendMessage, useNavigate } from './usePluginBridge'
 import { checkTextsWithAI } from './deepseek'
-import { requestStorage, saveRules, saveApiKey } from './storage'
+import { requestStorage, saveRules, saveApiKey, saveScanOptions } from './storage'
 
 type Tab = 'scan' | 'results' | 'summary' | 'rules'
 type ScanState = 'idle' | 'scanning' | 'checking' | 'done' | 'error'
@@ -20,7 +20,7 @@ export default function App() {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [errorMsg, setErrorMsg] = useState('')
   const navigate = useNavigate()
-  const dirty = useRef({ rules: false, apiKey: false })
+  const dirty = useRef({ rules: false, apiKey: false, scanOptions: false })
   const abortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
@@ -34,6 +34,10 @@ export default function App() {
     if (msg.type === 'storage-data') {
       if (!dirty.current.rules) setRules(msg.rules)
       if (!dirty.current.apiKey) setApiKey(msg.apiKey)
+      if (!dirty.current.scanOptions) {
+        setScope(msg.scope)
+        setOnlyVisible(msg.onlyVisible)
+      }
     }
   }
 
@@ -166,9 +170,9 @@ export default function App() {
             onRulesChange={(v) => { dirty.current.rules = true; setRules(v); saveRules(v) }}
             onApiKeyChange={(v) => { dirty.current.apiKey = true; setApiKey(v); saveApiKey(v) }}
             scope={scope}
-            onScopeChange={setScope}
+            onScopeChange={(v) => { dirty.current.scanOptions = true; setScope(v); saveScanOptions(v, onlyVisible) }}
             onlyVisible={onlyVisible}
-            onOnlyVisibleChange={setOnlyVisible}
+            onOnlyVisibleChange={(v) => { dirty.current.scanOptions = true; setOnlyVisible(v); saveScanOptions(scope, v) }}
           />
         )}
       </div>

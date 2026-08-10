@@ -26,7 +26,7 @@ export type PluginMessage =
   | { type: 'apply-change'; nodeId: string; newText: string }
   | { type: 'apply-all'; changes: { nodeId: string; newText: string }[] }
   | { type: 'error'; message: string }
-  | { type: 'storage-data'; rules: string; apiKey: string }
+  | { type: 'storage-data'; rules: string; apiKey: string; scope: ScanScope; onlyVisible: boolean }
 
 export type UIMessage =
   | { type: 'start-scan'; scope: ScanScope; onlyVisible: boolean }
@@ -35,3 +35,4 @@ export type UIMessage =
   | { type: 'apply-all'; changes: { nodeId: string; newText: string }[] }
   | { type: 'load-storage' }
   | { type: 'save-storage'; key: 'rules' | 'apiKey'; value: string }
+  | { type: 'save-scan-options'; scope: ScanScope; onlyVisible: boolean }

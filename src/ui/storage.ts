@@ -1,3 +1,4 @@
+import type { ScanScope } from '../shared/types'
 import { sendMessage } from './usePluginBridge'
 
 export function requestStorage() {
@@ -10,4 +11,8 @@ export function saveRules(rules: string) {
 
 export function saveApiKey(key: string) {
   sendMessage({ type: 'save-storage', key: 'apiKey', value: key })
+}
+
+export function saveScanOptions(scope: ScanScope, onlyVisible: boolean) {
+  sendMessage({ type: 'save-scan-options', scope, onlyVisible })
 }

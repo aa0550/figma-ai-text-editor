@@ -163,26 +163,30 @@ function RulesTab({ rules, apiKey, onRulesChange, onApiKeyChange }: {
 }) {
   return (
     <div style={styles.section}>
-      <div style={styles.fieldHeader}>
-        <label style={styles.label}>DeepSeek API Key</label>
-        <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noreferrer" style={styles.link}>
-          Получить ключ
-        </a>
+      <div style={styles.fieldGroup}>
+        <div style={styles.fieldHeader}>
+          <label style={styles.label}>DeepSeek API Key</label>
+          <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noreferrer" style={styles.link}>
+            Получить ключ
+          </a>
+        </div>
+        <input
+          type="password"
+          value={apiKey}
+          onChange={(e) => onApiKeyChange(e.target.value.trim())}
+          placeholder="sk-..."
+          style={styles.input}
+        />
       </div>
-      <input
-        type="password"
-        value={apiKey}
-        onChange={(e) => onApiKeyChange(e.target.value.trim())}
-        placeholder="sk-..."
-        style={styles.input}
-      />
-      <label style={styles.label} >Правила и Tone of Voice</label>
-      <textarea
-        value={rules}
-        onChange={(e) => onRulesChange(e.target.value)}
-        placeholder="Опишите правила написания текстов: обращение к пользователю, пунктуация, стиль, запрещённые слова и т.д."
-        style={styles.textareaGrow}
-      />
+      <div style={{ ...styles.fieldGroup, flex: 1 }}>
+        <label style={styles.label}>Правила и Tone of Voice</label>
+        <textarea
+          value={rules}
+          onChange={(e) => onRulesChange(e.target.value)}
+          placeholder="Опишите правила написания текстов: обращение к пользователю, пунктуация, стиль, запрещённые слова и т.д."
+          style={styles.textareaGrow}
+        />
+      </div>
     </div>
   )
 }
@@ -201,7 +205,7 @@ function ScanTab({ state, progress, error, onStart, onRetry }: {
       )}
       {state === 'scanning' && <Spinner label="Сканирование текстов..." />}
       {state === 'checking' && (
-        <Spinner label={`Проверка AI: ${progress.done} / ${progress.total}`} />
+        <Spinner label={`Проверка ${progress.done} / ${progress.total}`} labelStyle={styles.status} />
       )}
       {state === 'done' && (
         <>
@@ -231,7 +235,7 @@ function ResultsTab({ suggestions, onNavigate, onAccept, onSkip, onAcceptAll }: 
 
   if (suggestions.length === 0) {
     return <div style={{ ...styles.section, alignItems: 'center', justifyContent: 'center' }}>
-      <p style={styles.hint}>Нет предложений. Запустите проверку.</p>
+      <p style={styles.status}>Нет предложений. Запустите проверку.</p>
     </div>
   }
 
@@ -330,7 +334,7 @@ function SummaryTab({ summary }: { summary: string }) {
 
   if (!summary) {
     return <div style={{ ...styles.section, alignItems: 'center', padding: 32 }}>
-      <p style={styles.hint}>Нет принятых изменений</p>
+      <p style={styles.status}>Нет принятых изменений</p>
     </div>
   }
 
@@ -342,11 +346,11 @@ function SummaryTab({ summary }: { summary: string }) {
   )
 }
 
-function Spinner({ label }: { label: string }) {
+function Spinner({ label, labelStyle }: { label: string; labelStyle?: React.CSSProperties }) {
   return (
     <div style={{ textAlign: 'center' }}>
       <div style={styles.spinner} />
-      <p style={styles.hint}>{label}</p>
+      <p style={labelStyle ?? styles.hint}>{label}</p>
     </div>
   )
 }
@@ -363,9 +367,10 @@ const styles: Record<string, React.CSSProperties> = {
   textarea: { border: '1px solid #E5E7EB', background: '#F9FAFB', borderRadius: 10, padding: '10px 12px', fontSize: 13, resize: 'vertical', minHeight: 240, outline: 'none', lineHeight: 1.6, width: '100%', boxSizing: 'border-box', color: '#111827' },
   textareaGrow: { border: '1px solid #E5E7EB', background: '#F9FAFB', borderRadius: 10, padding: '10px 12px', fontSize: 13, resize: 'none', outline: 'none', lineHeight: 1.6, width: '100%', boxSizing: 'border-box', color: '#111827', flex: 1 },
   hint: { fontSize: 12, color: '#9CA3AF', margin: 0 },
-  status: { fontSize: 12, color: '#111827', margin: 0 },
+  status: { fontSize: 14, color: '#111827', margin: 0 },
   link: { fontSize: 12, color: '#4D6BFE', textDecoration: 'none', fontWeight: 500 },
   fieldHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  fieldGroup: { display: 'flex', flexDirection: 'column', gap: 8 },
   primary: { background: '#4D6BFE', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', cursor: 'pointer', fontWeight: 600, fontSize: 13, boxShadow: '0 1px 2px rgba(16,24,40,0.06)' },
   secondary: { background: '#fff', color: '#374151', border: '1px solid #E5E7EB', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 500 },
   resultsHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },

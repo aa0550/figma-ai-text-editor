@@ -299,28 +299,10 @@ function ResultsTab({ suggestions, onNavigate, onAccept, onSkip, onAcceptAll }: 
   )
 }
 
-function diffParts(a: string, b: string) {
-  let start = 0
-  while (start < a.length && start < b.length && a[start] === b[start]) start++
-  let endA = a.length
-  let endB = b.length
-  while (endA > start && endB > start && a[endA - 1] === b[endB - 1]) {
-    endA--
-    endB--
-  }
-  return {
-    prefix: a.slice(0, start),
-    oldMid: a.slice(start, endA),
-    newMid: b.slice(start, endB),
-    suffix: a.slice(endA),
-  }
-}
-
 function SuggestionCard({ suggestion: s, onNavigate, onAccept, onSkip }: {
   suggestion: Suggestion; onNavigate: () => void; onAccept: () => void; onSkip: () => void
 }) {
   const isDone = s.accepted || s.skipped
-  const { prefix, oldMid, newMid, suffix } = diffParts(s.original, s.suggested)
   return (
     <div style={{ ...styles.card, opacity: isDone ? 0.5 : 1 }}>
       <div style={styles.cardMeta} onClick={onNavigate}>
@@ -328,14 +310,8 @@ function SuggestionCard({ suggestion: s, onNavigate, onAccept, onSkip }: {
         <span style={styles.navArrow}>→</span>
       </div>
       <div style={styles.diff}>
-        <div style={styles.diffOld}>
-          <span style={styles.diffLabel}>Было</span>
-          {prefix}<mark style={styles.diffOldMark}>{oldMid}</mark>{suffix}
-        </div>
-        <div style={styles.diffNew}>
-          <span style={styles.diffLabel}>Стало</span>
-          {prefix}<mark style={styles.diffNewMark}>{newMid}</mark>{suffix}
-        </div>
+        <p style={styles.diffLine}>Было: {s.original}</p>
+        <p style={styles.diffLine}>Стало: {s.suggested}</p>
       </div>
       <div style={styles.reason}>{s.reason}</div>
       {!isDone && (
@@ -468,12 +444,8 @@ const styles: Record<string, React.CSSProperties> = {
   frameName: { fontSize: 11, fontWeight: 600, color: '#8C8C8C', textTransform: 'uppercase', letterSpacing: 0.5 },
   navArrow: { fontSize: 12, color: '#0D99FF' },
   diff: { display: 'flex', flexDirection: 'column', gap: 4 },
-  diffOld: { background: '#F5F5F5', borderRadius: 5, padding: '7px 9px', fontSize: 12, color: '#1E1E1E', lineHeight: 1.5 },
-  diffNew: { background: '#F5F5F5', borderRadius: 5, padding: '7px 9px', fontSize: 12, color: '#1E1E1E', lineHeight: 1.5 },
-  diffLabel: { fontSize: 10, fontWeight: 700, marginRight: 6, color: '#8C8C8C', textTransform: 'uppercase' },
-  diffOldMark: { background: 'rgba(140,140,140,0.2)', color: '#8C8C8C', textDecoration: 'line-through', borderRadius: 3, padding: '0 2px' },
-  diffNewMark: { background: 'rgba(13,153,255,0.12)', color: '#0D99FF', fontWeight: 700, borderRadius: 3, padding: '0 2px' },
-  reason: { fontSize: 11, color: '#1E1E1E' },
+  diffLine: { fontSize: 12, color: '#1E1E1E', lineHeight: 1.5, margin: 0 },
+  reason: { fontSize: 12, color: '#1E1E1E' },
   cardActions: { display: 'flex', gap: 8 },
   acceptBtn: { flex: 1, background: '#0D99FF', color: '#fff', border: 'none', borderRadius: 7, padding: '7px', cursor: 'pointer', fontWeight: 600, fontSize: 12 },
   skipBtn: { flex: 1, background: '#fff', color: '#8C8C8C', border: '1px solid #E6E6E6', borderRadius: 7, padding: '7px', cursor: 'pointer', fontSize: 12 },

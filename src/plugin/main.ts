@@ -121,6 +121,8 @@ figma.ui.onmessage = async (msg) => {
     node.characters = text
     for (const link of links) {
       node.setRangeHyperlink(link.start, link.end, { type: 'NODE', value: link.nodeId })
+      node.setRangeFills(link.start, link.end, [{ type: 'SOLID', color: { r: 0.051, g: 0.6, b: 1 } }])
+      node.setRangeTextDecoration(link.start, link.end, 'UNDERLINE')
     }
 
     node.textAutoResize = 'HEIGHT'

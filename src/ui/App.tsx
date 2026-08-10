@@ -279,7 +279,7 @@ function ResultsTab({ suggestions, onNavigate, onAccept, onSkip, onAcceptAll }: 
   }
 
   return (
-    <div style={{ ...styles.section, padding: 16 }}>
+    <div style={styles.section}>
       <div style={styles.resultsHeader}>
         <span style={styles.status}>{pending.length} ожидают · {accepted.length} принято</span>
       </div>
@@ -437,15 +437,15 @@ const styles: Record<string, React.CSSProperties> = {
   selectOptionActive: { background: 'rgba(13,153,255,0.1)', color: '#0D99FF', fontWeight: 600 },
   primary: { background: '#0D99FF', color: '#fff', border: 'none', borderRadius: 7, padding: '9px 18px', cursor: 'pointer', fontWeight: 600, fontSize: 12 },
   secondary: { background: '#fff', color: '#1E1E1E', border: '1px solid #E6E6E6', borderRadius: 7, padding: '8px 13px', cursor: 'pointer', fontSize: 12, fontWeight: 500 },
-  resultsHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  resultsHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   list: { display: 'flex', flexDirection: 'column', gap: 8, overflow: 'auto', borderTop: '1px solid #E6E6E6', borderBottom: '1px solid #E6E6E6', margin: '0 -16px', padding: '8px 16px' },
   card: { border: '1px solid #E6E6E6', borderRadius: 7, padding: 13, display: 'flex', flexDirection: 'column', gap: 8, transition: 'opacity 0.2s', background: '#fff' },
   cardMeta: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' },
   frameName: { fontSize: 11, fontWeight: 600, color: '#8C8C8C', textTransform: 'uppercase', letterSpacing: 0.5 },
   navArrow: { fontSize: 12, color: '#0D99FF' },
   diff: { display: 'flex', flexDirection: 'column', gap: 4 },
-  diffLine: { fontSize: 14, color: '#1E1E1E', lineHeight: 1.5, margin: 0 },
-  reason: { fontSize: 14, color: '#1E1E1E', margin: 0 },
+  diffLine: { fontSize: 14, color: '#1E1E1E', lineHeight: 1.4, margin: 0 },
+  reason: { fontSize: 14, color: '#1E1E1E', lineHeight: 1.4, margin: 0 },
   cardActions: { display: 'flex', gap: 8 },
   acceptBtn: { flex: 1, background: '#0D99FF', color: '#fff', border: 'none', borderRadius: 7, padding: '7px', cursor: 'pointer', fontWeight: 600, fontSize: 12 },
   skipBtn: { flex: 1, background: '#fff', color: '#8C8C8C', border: '1px solid #E6E6E6', borderRadius: 7, padding: '7px', cursor: 'pointer', fontSize: 12 },

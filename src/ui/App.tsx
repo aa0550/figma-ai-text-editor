@@ -438,7 +438,7 @@ const styles: Record<string, React.CSSProperties> = {
   primary: { background: '#0D99FF', color: '#fff', border: 'none', borderRadius: 7, padding: '9px 18px', cursor: 'pointer', fontWeight: 600, fontSize: 12 },
   secondary: { background: '#fff', color: '#1E1E1E', border: '1px solid #E6E6E6', borderRadius: 7, padding: '8px 13px', cursor: 'pointer', fontSize: 12, fontWeight: 500 },
   resultsHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  list: { display: 'flex', flexDirection: 'column', gap: 8, overflow: 'auto', borderTop: '1px solid #E6E6E6', borderBottom: '1px solid #E6E6E6' },
+  list: { display: 'flex', flexDirection: 'column', gap: 8, overflow: 'auto', borderTop: '1px solid #E6E6E6', borderBottom: '1px solid #E6E6E6', margin: '0 -16px', padding: '8px 16px' },
   card: { border: '1px solid #E6E6E6', borderRadius: 7, padding: 13, display: 'flex', flexDirection: 'column', gap: 8, transition: 'opacity 0.2s', background: '#fff' },
   cardMeta: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' },
   frameName: { fontSize: 11, fontWeight: 600, color: '#8C8C8C', textTransform: 'uppercase', letterSpacing: 0.5 },

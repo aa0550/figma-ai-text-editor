@@ -55,7 +55,7 @@ export default function App() {
       })
       setSuggestions(results)
       setScanState('done')
-      setTab('results')
+      if (results.length > 0) setTab('results')
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : String(e))
       setScanState('error')
@@ -205,7 +205,7 @@ function ScanTab({ state, progress, error, onStart, onRetry }: {
       )}
       {state === 'done' && (
         <>
-          <p style={styles.hint}>Проверка завершена</p>
+          <p style={styles.status}>Проверка завершена</p>
           <button style={styles.secondary} onClick={onRetry}>Проверить снова</button>
         </>
       )}
@@ -230,7 +230,7 @@ function ResultsTab({ suggestions, onNavigate, onAccept, onSkip, onAcceptAll }: 
   const accepted = suggestions.filter((s) => s.accepted)
 
   if (suggestions.length === 0) {
-    return <div style={{ ...styles.section, alignItems: 'center', padding: 32 }}>
+    return <div style={{ ...styles.section, alignItems: 'center', justifyContent: 'center' }}>
       <p style={styles.hint}>Нет предложений. Запустите проверку.</p>
     </div>
   }
@@ -357,12 +357,13 @@ const styles: Record<string, React.CSSProperties> = {
   navBtn: { flex: 1, padding: '8px 4px', border: 'none', background: 'transparent', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 500, color: '#6B7280', transition: 'background 0.15s, color 0.15s' },
   navActive: { background: '#fff', color: '#4D6BFE', fontWeight: 600, boxShadow: '0 1px 2px rgba(16,24,40,0.08)' },
   content: { flex: 1, overflow: 'auto', padding: 12, display: 'flex', flexDirection: 'column' },
-  section: { display: 'flex', flexDirection: 'column', padding: 16, gap: 10, height: '100%', boxSizing: 'border-box', background: '#fff', border: '1px solid #E5E7EB', borderRadius: 14, boxShadow: '0 1px 2px rgba(16,24,40,0.04)' },
+  section: { display: 'flex', flexDirection: 'column', padding: 16, gap: 16, height: '100%', boxSizing: 'border-box', background: '#fff', border: '1px solid #E5E7EB', borderRadius: 14, boxShadow: '0 1px 2px rgba(16,24,40,0.04)' },
   label: { fontWeight: 600, fontSize: 12, color: '#374151', marginBottom: 2 },
   input: { border: '1px solid #E5E7EB', background: '#F9FAFB', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box', color: '#111827' },
   textarea: { border: '1px solid #E5E7EB', background: '#F9FAFB', borderRadius: 10, padding: '10px 12px', fontSize: 13, resize: 'vertical', minHeight: 240, outline: 'none', lineHeight: 1.6, width: '100%', boxSizing: 'border-box', color: '#111827' },
   textareaGrow: { border: '1px solid #E5E7EB', background: '#F9FAFB', borderRadius: 10, padding: '10px 12px', fontSize: 13, resize: 'none', outline: 'none', lineHeight: 1.6, width: '100%', boxSizing: 'border-box', color: '#111827', flex: 1 },
   hint: { fontSize: 12, color: '#9CA3AF', margin: 0 },
+  status: { fontSize: 12, color: '#111827', margin: 0 },
   link: { fontSize: 12, color: '#4D6BFE', textDecoration: 'none', fontWeight: 500 },
   fieldHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   primary: { background: '#4D6BFE', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', cursor: 'pointer', fontWeight: 600, fontSize: 13, boxShadow: '0 1px 2px rgba(16,24,40,0.06)' },

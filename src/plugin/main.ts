@@ -115,10 +115,9 @@ figma.ui.onmessage = async (msg) => {
     msg.items.forEach((item: SummaryItem, i: number) => {
       const prefix = `${i + 1}. Экран `
       const label = `«${item.parentName}»`
-      const suffix = ` (страница «${item.pageName}», x=${item.parentX}, y=${item.parentY})`
       const start = text.length + prefix.length
       links.push({ start, end: start + label.length, nodeId: item.parentId })
-      text += `${prefix}${label}${suffix}\nБыло: ${item.original}\nСтало: ${item.suggested}\n${item.reason}`
+      text += `${prefix}${label}\nБыло: ${item.original}\nСтало: ${item.suggested}\n${item.reason}`
       if (i < msg.items.length - 1) text += '\n\n'
     })
 

@@ -118,11 +118,10 @@ export default function App() {
     const accepted = suggestions.filter((s) => s.accepted)
     if (accepted.length === 0) return ''
     const lines = accepted.map((s, i) => {
-      const location = `Экран «${s.parentName}» (страница «${s.pageName}», x=${s.parentX}, y=${s.parentY})`
       const link = fileKey
-        ? `\nСсылка: https://www.figma.com/design/${fileKey}?node-id=${s.parentId.replace(/:/g, '-')}`
-        : ''
-      return `${i + 1}. ${location}${link}\nБыло: ${s.original}\nСтало: ${s.suggested}\n${s.reason}`
+        ? `https://www.figma.com/design/${fileKey}?node-id=${s.parentId.replace(/:/g, '-')}`
+        : `node-id: ${s.parentId}`
+      return `${i + 1}. ${link}\nБыло: ${s.original}\nСтало: ${s.suggested}\n${s.reason}`
     })
     return lines.join('\n\n')
   }

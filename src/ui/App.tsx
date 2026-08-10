@@ -233,7 +233,7 @@ function ScanTab({ state, progress, error, onStart, onRetry }: {
       {(state === 'idle' || state === 'done') && (
         <button style={styles.primary} onClick={onStart}>Проверить</button>
       )}
-      {state === 'scanning' && <Spinner label="Сканирование текстов..." />}
+      {state === 'scanning' && <Spinner />}
       {state === 'checking' && (
         <Spinner label={`Проверка ${progress.done} / ${progress.total}`} labelStyle={styles.status} />
       )}
@@ -370,11 +370,11 @@ function SummaryTab({ summary, hasSuggestions }: { summary: string; hasSuggestio
   )
 }
 
-function Spinner({ label, labelStyle }: { label: string; labelStyle?: React.CSSProperties }) {
+function Spinner({ label, labelStyle }: { label?: string; labelStyle?: React.CSSProperties }) {
   return (
     <div style={{ textAlign: 'center' }}>
       <div style={styles.spinner} />
-      <p style={labelStyle ?? styles.hint}>{label}</p>
+      {label && <p style={labelStyle ?? styles.hint}>{label}</p>}
     </div>
   )
 }

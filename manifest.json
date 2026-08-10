@@ -1,5 +1,5 @@
 {
-  "name": "AI Tone Editor",
+  "name": "AI Text Editor",
   "id": "ux-text-editor",
   "api": "1.0.0",
   "main": "dist/main.js",

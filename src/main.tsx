@@ -9,7 +9,7 @@ style.textContent = `
   body { overflow: hidden; }
   button, select { outline: none; }
   button:focus, select:focus { outline: none; }
-  button { transition: background-color 0.12s, border-color 0.12s; }
+  button { transition: background-color 0.12s, border-color 0.12s; font-family: inherit; }
   .select-option:hover { background: #F0F0F0; color: #1E1E1E; }
   .select-trigger:hover { background: #EFEFEF !important; }
   .nav-btn-inactive:hover { background: rgba(0,0,0,0.06) !important; }

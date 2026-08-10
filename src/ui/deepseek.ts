@@ -1,7 +1,7 @@
 import type { TextNode, Suggestion } from '../shared/types'
 
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
-const MODEL = 'deepseek/deepseek-chat'
+const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions'
+const MODEL = 'deepseek-chat'
 
 export async function checkTextsWithAI(
   nodes: TextNode[],
@@ -60,13 +60,11 @@ ${textsJson}
 
   let response: Response
   try {
-    response = await fetch(OPENROUTER_URL, {
+    response = await fetch(DEEPSEEK_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey.trim()}`,
-        'HTTP-Referer': 'https://www.figma.com',
-        'X-Title': 'UX Text Editor',
       },
       body: JSON.stringify({
         model: MODEL,
@@ -79,7 +77,7 @@ ${textsJson}
       await new Promise((r) => setTimeout(r, 3000))
       return checkBatch(nodes, rules, apiKey, attempt + 1)
     }
-    throw new Error(`Не удалось связаться с OpenRouter API: ${e instanceof Error ? e.message : String(e)}`)
+    throw new Error(`Не удалось связаться с DeepSeek API: ${e instanceof Error ? e.message : String(e)}`)
   }
 
   if (!response.ok) {
@@ -90,7 +88,7 @@ ${textsJson}
       await new Promise((r) => setTimeout(r, delaySec * 1000))
       return checkBatch(nodes, rules, apiKey, attempt + 1)
     }
-    throw new Error(`OpenRouter API error ${response.status}: ${err}`)
+    throw new Error(`DeepSeek API error ${response.status}: ${err}`)
   }
 
   const data = await response.json()
@@ -100,7 +98,7 @@ ${textsJson}
   try {
     changes = JSON.parse(extractJson(raw)).changes ?? []
   } catch {
-    console.error('Failed to parse OpenRouter response:', raw)
+    console.error('Failed to parse DeepSeek response:', raw)
     return []
   }
 

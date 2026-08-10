@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import type { Suggestion, TextNode, PluginMessage } from '../shared/types'
 import { usePluginMessage, sendMessage, useNavigate } from './usePluginBridge'
-import { checkTextsWithAI } from './openrouter'
+import { checkTextsWithAI } from './deepseek'
 import { requestStorage, saveRules, saveApiKey } from './storage'
 
 type Tab = 'rules' | 'scan' | 'results' | 'summary'
@@ -61,7 +61,7 @@ export default function App() {
   }
 
   function startScan() {
-    if (!apiKey.trim()) { setErrorMsg('Укажите API ключ OpenRouter'); setScanState('error'); return }
+    if (!apiKey.trim()) { setErrorMsg('Укажите API ключ DeepSeek'); setScanState('error'); return }
     if (!rules.trim()) { setErrorMsg('Добавьте правила во вкладке «Правила»'); setScanState('error'); return }
     setErrorMsg('')
     setScanState('scanning')
@@ -165,16 +165,16 @@ function RulesTab({ rules, apiKey, onRulesChange, onApiKeyChange }: {
 }) {
   return (
     <div style={styles.section}>
-      <label style={styles.label}>OpenRouter API Key</label>
+      <label style={styles.label}>DeepSeek API Key</label>
       <input
         type="password"
         value={apiKey}
         onChange={(e) => onApiKeyChange(e.target.value.trim())}
-        placeholder="sk-or-v1-..."
+        placeholder="sk-..."
         style={styles.input}
       />
-      <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer" style={styles.link}>
-        Получить бесплатно →
+      <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noreferrer" style={styles.link}>
+        Получить ключ →
       </a>
       <label style={styles.label} >Правила и Tone of Voice</label>
       <textarea

@@ -61,7 +61,7 @@ export default function App() {
       if (controller.signal.aborted) return
       setSuggestions(results)
       setScanState('done')
-      if (results.length > 0) setTab('results')
+      setTab('results')
     } catch (e) {
       if (controller.signal.aborted) {
         setScanState('idle')

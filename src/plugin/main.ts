@@ -14,6 +14,8 @@ function getParentFrameName(node: BaseNode): string {
 }
 
 function collectTextNodes(node: SceneNode, results: { id: string; text: string; parentName: string; pageName: string }[]) {
+  if (!node.visible) return
+
   if (node.type === 'TEXT') {
     results.push({
       id: node.id,
@@ -29,7 +31,22 @@ function collectTextNodes(node: SceneNode, results: { id: string; text: string; 
   }
 }
 
+const STORAGE_KEYS = { rules: 'ux-editor-rules', apiKey: 'ux-editor-api-key' } as const
+
 figma.ui.onmessage = async (msg) => {
+  if (msg.type === 'load-storage') {
+    const [rules, apiKey] = await Promise.all([
+      figma.clientStorage.getAsync(STORAGE_KEYS.rules),
+      figma.clientStorage.getAsync(STORAGE_KEYS.apiKey),
+    ])
+    figma.ui.postMessage({ type: 'storage-data', rules: rules ?? '', apiKey: apiKey ?? '' })
+  }
+
+  if (msg.type === 'save-storage') {
+    const key = msg.key as keyof typeof STORAGE_KEYS
+    await figma.clientStorage.setAsync(STORAGE_KEYS[key], msg.value)
+  }
+
   if (msg.type === 'start-scan') {
     const nodes: { id: string; text: string; parentName: string; pageName: string }[] = []
     for (const node of figma.currentPage.children) {
@@ -39,7 +56,7 @@ figma.ui.onmessage = async (msg) => {
   }
 
   if (msg.type === 'navigate-to-node') {
-    const node = figma.getNodeById(msg.nodeId)
+    const node = await figma.getNodeByIdAsync(msg.nodeId)
     if (node && node.type !== 'DOCUMENT' && node.type !== 'PAGE') {
       figma.viewport.scrollAndZoomIntoView([node as SceneNode])
       figma.currentPage.selection = [node as SceneNode]
@@ -47,22 +64,31 @@ figma.ui.onmessage = async (msg) => {
   }
 
   if (msg.type === 'apply-change') {
-    const node = figma.getNodeById(msg.nodeId)
+    const node = await figma.getNodeByIdAsync(msg.nodeId)
     if (node && node.type === 'TEXT') {
-      await figma.loadFontAsync(node.fontName as FontName)
-      node.characters = msg.newText
+      try {
+        await figma.loadFontAsync(node.fontName as FontName)
+        node.characters = msg.newText
+      } catch {
+        figma.notify('Не удалось применить изменение: неподдерживаемый шрифт', { error: true })
+      }
     }
   }
 
   if (msg.type === 'apply-all') {
+    let failed = 0
     for (const change of msg.changes) {
-      const node = figma.getNodeById(change.nodeId)
+      const node = await figma.getNodeByIdAsync(change.nodeId)
       if (node && node.type === 'TEXT') {
-        await figma.loadFontAsync(node.fontName as FontName)
-        node.characters = change.newText
+        try {
+          await figma.loadFontAsync(node.fontName as FontName)
+          node.characters = change.newText
+        } catch {
+          failed++
+        }
       }
     }
-    figma.notify('Все изменения применены ✓')
+    figma.notify(failed > 0 ? `Применено с ошибками: ${failed} узлов пропущено` : 'Все изменения применены ✓')
   }
 
   if (msg.type === 'get-file-key') {

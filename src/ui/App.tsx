@@ -1,31 +1,40 @@
-import { useState, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { Suggestion, TextNode, PluginMessage } from '../shared/types'
 import { usePluginMessage, sendMessage, useNavigate } from './usePluginBridge'
-import { checkTextsWithAI } from './gemini'
-import { loadRules, saveRules, loadApiKey, saveApiKey } from './storage'
+import { checkTextsWithAI } from './openrouter'
+import { requestStorage, saveRules, saveApiKey } from './storage'
 
 type Tab = 'rules' | 'scan' | 'results' | 'summary'
 type ScanState = 'idle' | 'scanning' | 'checking' | 'done' | 'error'
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('rules')
-  const [rules, setRules] = useState(loadRules)
-  const [apiKey, setApiKey] = useState(loadApiKey)
+  const [rules, setRules] = useState('')
+  const [apiKey, setApiKey] = useState('')
   const [scanState, setScanState] = useState<ScanState>('idle')
   const [progress, setProgress] = useState({ done: 0, total: 0 })
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [errorMsg, setErrorMsg] = useState('')
   const [fileKey, setFileKey] = useState<string | null>(null)
   const navigate = useNavigate()
+  const dirty = useRef({ rules: false, apiKey: false })
 
-  const onPluginMessage = useCallback((msg: PluginMessage) => {
+  useEffect(() => {
+    requestStorage()
+  }, [])
+
+  function onPluginMessage(msg: PluginMessage) {
     if (msg.type === 'scan-complete') {
       handleScanComplete(msg.nodes)
     }
     if (msg.type === 'file-key') {
       setFileKey(msg.key)
     }
-  }, [])
+    if (msg.type === 'storage-data') {
+      if (!dirty.current.rules) setRules(msg.rules)
+      if (!dirty.current.apiKey) setApiKey(msg.apiKey)
+    }
+  }
 
   usePluginMessage(onPluginMessage)
 
@@ -52,7 +61,7 @@ export default function App() {
   }
 
   function startScan() {
-    if (!apiKey.trim()) { setErrorMsg('Укажите API ключ Gemini'); setScanState('error'); return }
+    if (!apiKey.trim()) { setErrorMsg('Укажите API ключ OpenRouter'); setScanState('error'); return }
     if (!rules.trim()) { setErrorMsg('Добавьте правила во вкладке «Правила»'); setScanState('error'); return }
     setErrorMsg('')
     setScanState('scanning')
@@ -115,8 +124,8 @@ export default function App() {
           <RulesTab
             rules={rules}
             apiKey={apiKey}
-            onRulesChange={(v) => { setRules(v); saveRules(v) }}
-            onApiKeyChange={(v) => { setApiKey(v); saveApiKey(v) }}
+            onRulesChange={(v) => { dirty.current.rules = true; setRules(v); saveRules(v) }}
+            onApiKeyChange={(v) => { dirty.current.apiKey = true; setApiKey(v); saveApiKey(v) }}
           />
         )}
         {tab === 'scan' && (
@@ -156,15 +165,15 @@ function RulesTab({ rules, apiKey, onRulesChange, onApiKeyChange }: {
 }) {
   return (
     <div style={styles.section}>
-      <label style={styles.label}>Gemini API Key</label>
+      <label style={styles.label}>OpenRouter API Key</label>
       <input
         type="password"
         value={apiKey}
-        onChange={(e) => onApiKeyChange(e.target.value)}
-        placeholder="AIza..."
+        onChange={(e) => onApiKeyChange(e.target.value.trim())}
+        placeholder="sk-or-v1-..."
         style={styles.input}
       />
-      <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" style={styles.link}>
+      <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer" style={styles.link}>
         Получить бесплатно →
       </a>
       <label style={styles.label} >Правила и Tone of Voice</label>
@@ -252,10 +261,28 @@ function ResultsTab({ suggestions, onNavigate, onAccept, onSkip, onAcceptAll, on
   )
 }
 
+function diffParts(a: string, b: string) {
+  let start = 0
+  while (start < a.length && start < b.length && a[start] === b[start]) start++
+  let endA = a.length
+  let endB = b.length
+  while (endA > start && endB > start && a[endA - 1] === b[endB - 1]) {
+    endA--
+    endB--
+  }
+  return {
+    prefix: a.slice(0, start),
+    oldMid: a.slice(start, endA),
+    newMid: b.slice(start, endB),
+    suffix: a.slice(endA),
+  }
+}
+
 function SuggestionCard({ suggestion: s, onNavigate, onAccept, onSkip }: {
   suggestion: Suggestion; onNavigate: () => void; onAccept: () => void; onSkip: () => void
 }) {
   const isDone = s.accepted || s.skipped
+  const { prefix, oldMid, newMid, suffix } = diffParts(s.original, s.suggested)
   return (
     <div style={{ ...styles.card, opacity: isDone ? 0.5 : 1 }}>
       <div style={styles.cardMeta} onClick={onNavigate}>
@@ -263,8 +290,14 @@ function SuggestionCard({ suggestion: s, onNavigate, onAccept, onSkip }: {
         <span style={styles.navArrow}>→</span>
       </div>
       <div style={styles.diff}>
-        <div style={styles.diffOld}><span style={styles.diffLabel}>Было</span>{s.original}</div>
-        <div style={styles.diffNew}><span style={styles.diffLabel}>Стало</span>{s.suggested}</div>
+        <div style={styles.diffOld}>
+          <span style={styles.diffLabel}>Было</span>
+          {prefix}<mark style={styles.diffOldMark}>{oldMid}</mark>{suffix}
+        </div>
+        <div style={styles.diffNew}>
+          <span style={styles.diffLabel}>Стало</span>
+          {prefix}<mark style={styles.diffNewMark}>{newMid}</mark>{suffix}
+        </div>
       </div>
       <div style={styles.reason}>{s.reason}</div>
       {!isDone && (
@@ -334,6 +367,8 @@ const styles: Record<string, React.CSSProperties> = {
   diffOld: { background: '#fff5f5', borderRadius: 4, padding: '6px 8px', fontSize: 13, color: '#c0392b', borderLeft: '3px solid #e57373', lineHeight: 1.5 },
   diffNew: { background: '#f0fff4', borderRadius: 4, padding: '6px 8px', fontSize: 13, color: '#1a7a3c', borderLeft: '3px solid #4caf50', lineHeight: 1.5 },
   diffLabel: { fontSize: 10, fontWeight: 700, marginRight: 6, opacity: 0.6, textTransform: 'uppercase' },
+  diffOldMark: { background: '#f8b4b4', color: '#7a1f1f', borderRadius: 3, padding: '0 2px', textDecoration: 'line-through' },
+  diffNewMark: { background: '#a8e6b8', color: '#12401f', borderRadius: 3, padding: '0 2px', fontWeight: 700 },
   reason: { fontSize: 11, color: '#888', fontStyle: 'italic' },
   cardActions: { display: 'flex', gap: 8 },
   acceptBtn: { flex: 1, background: '#f0fff4', color: '#1a7a3c', border: '1px solid #4caf50', borderRadius: 6, padding: '6px', cursor: 'pointer', fontWeight: 600, fontSize: 12 },

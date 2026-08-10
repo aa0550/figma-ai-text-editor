@@ -24,6 +24,7 @@ export type PluginMessage =
   | { type: 'get-file-key' }
   | { type: 'file-key'; key: string | null }
   | { type: 'error'; message: string }
+  | { type: 'storage-data'; rules: string; apiKey: string }
 
 export type UIMessage =
   | { type: 'start-scan' }
@@ -31,3 +32,5 @@ export type UIMessage =
   | { type: 'apply-change'; nodeId: string; newText: string }
   | { type: 'apply-all'; changes: { nodeId: string; newText: string }[] }
   | { type: 'get-file-key' }
+  | { type: 'load-storage' }
+  | { type: 'save-storage'; key: 'rules' | 'apiKey'; value: string }

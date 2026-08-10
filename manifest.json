@@ -5,8 +5,7 @@
   "main": "dist/main.js",
   "ui": "dist/index.html",
   "networkAccess": {
-    "allowedDomains": ["https://generativelanguage.googleapis.com"]
+    "allowedDomains": ["https://openrouter.ai"]
   },
-  "editorType": ["figma"],
-  "permissions": ["currentuser"]
+  "editorType": ["figma"]
 }

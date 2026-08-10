@@ -116,8 +116,6 @@ ${textsJson}
       reason: item.reason,
       parentName: node.parentName,
       parentId: node.parentId,
-      parentX: node.parentX,
-      parentY: node.parentY,
       pageName: node.pageName,
     }]
   })

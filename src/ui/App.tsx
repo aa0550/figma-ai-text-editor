@@ -19,7 +19,6 @@ export default function App() {
   const [progress, setProgress] = useState({ done: 0, total: 0 })
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [errorMsg, setErrorMsg] = useState('')
-  const [fileKey, setFileKey] = useState<string | null>(null)
   const navigate = useNavigate()
   const dirty = useRef({ rules: false, apiKey: false })
   const abortRef = useRef<AbortController | null>(null)
@@ -31,9 +30,6 @@ export default function App() {
   function onPluginMessage(msg: PluginMessage) {
     if (msg.type === 'scan-complete') {
       handleScanComplete(msg.nodes)
-    }
-    if (msg.type === 'file-key') {
-      setFileKey(msg.key)
     }
     if (msg.type === 'storage-data') {
       if (!dirty.current.rules) setRules(msg.rules)
@@ -78,7 +74,6 @@ export default function App() {
     setErrorMsg('')
     setScanState('scanning')
     setSuggestions([])
-    sendMessage({ type: 'get-file-key' })
     sendMessage({ type: 'start-scan', scope, onlyVisible })
   }
 
@@ -118,9 +113,7 @@ export default function App() {
     const accepted = suggestions.filter((s) => s.accepted)
     if (accepted.length === 0) return ''
     const lines = accepted.map((s, i) => {
-      const link = fileKey
-        ? `https://www.figma.com/design/${fileKey}?node-id=${s.parentId.replace(/:/g, '-')}`
-        : `node-id: ${s.parentId}`
+      const link = `?node-id=${s.parentId.replace(/:/g, '-')}`
       return `${i + 1}. ${link}\nБыло: ${s.original}\nСтало: ${s.suggested}\n${s.reason}`
     })
     return lines.join('\n\n')
@@ -164,11 +157,7 @@ export default function App() {
           />
         )}
         {tab === 'summary' && (
-          <SummaryTab
-            summary={buildSummary()}
-            hasSuggestions={suggestions.length > 0}
-            accepted={suggestions.filter((s) => s.accepted)}
-          />
+          <SummaryTab summary={buildSummary()} hasSuggestions={suggestions.length > 0} />
         )}
         {tab === 'rules' && (
           <RulesTab
@@ -386,29 +375,13 @@ function copyToClipboard(text: string) {
   document.body.removeChild(ta)
 }
 
-function SummaryTab({ summary, hasSuggestions, accepted }: { summary: string; hasSuggestions: boolean; accepted: Suggestion[] }) {
+function SummaryTab({ summary, hasSuggestions }: { summary: string; hasSuggestions: boolean }) {
   const [copied, setCopied] = useState(false)
 
   function copy() {
     copyToClipboard(summary)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
-  }
-
-  function insertToFigma() {
-    sendMessage({
-      type: 'insert-summary',
-      items: accepted.map((s) => ({
-        parentId: s.parentId,
-        parentName: s.parentName,
-        parentX: s.parentX,
-        parentY: s.parentY,
-        pageName: s.pageName,
-        original: s.original,
-        suggested: s.suggested,
-        reason: s.reason,
-      })),
-    })
   }
 
   if (!summary) {
@@ -420,10 +393,7 @@ function SummaryTab({ summary, hasSuggestions, accepted }: { summary: string; ha
   return (
     <div style={styles.section}>
       <pre style={styles.summaryBox}>{summary}</pre>
-      <div style={styles.cardActions}>
-        <button className="btn-secondary" style={styles.secondary} onClick={copy}>{copied ? 'Скопировано!' : 'Копировать'}</button>
-        <button className="btn-secondary" style={styles.secondary} onClick={insertToFigma}>Вставить в Figma</button>
-      </div>
+      <button className="btn-secondary" style={styles.secondary} onClick={copy}>{copied ? 'Скопировано!' : 'Копировать'}</button>
     </div>
   )
 }

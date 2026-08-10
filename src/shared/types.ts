@@ -3,8 +3,6 @@ export interface TextNode {
   text: string
   parentName: string
   parentId: string
-  parentX: number
-  parentY: number
   pageName: string
 }
 
@@ -15,8 +13,6 @@ export interface Suggestion {
   reason: string
   parentName: string
   parentId: string
-  parentX: number
-  parentY: number
   pageName: string
   accepted?: boolean
   skipped?: boolean
@@ -24,24 +20,11 @@ export interface Suggestion {
 
 export type ScanScope = 'page' | 'selection'
 
-export interface SummaryItem {
-  parentId: string
-  parentName: string
-  parentX: number
-  parentY: number
-  pageName: string
-  original: string
-  suggested: string
-  reason: string
-}
-
 export type PluginMessage =
   | { type: 'scan-complete'; nodes: TextNode[] }
   | { type: 'navigate-to-node'; nodeId: string }
   | { type: 'apply-change'; nodeId: string; newText: string }
   | { type: 'apply-all'; changes: { nodeId: string; newText: string }[] }
-  | { type: 'get-file-key' }
-  | { type: 'file-key'; key: string | null }
   | { type: 'error'; message: string }
   | { type: 'storage-data'; rules: string; apiKey: string }
 
@@ -50,7 +33,5 @@ export type UIMessage =
   | { type: 'navigate-to-node'; nodeId: string }
   | { type: 'apply-change'; nodeId: string; newText: string }
   | { type: 'apply-all'; changes: { nodeId: string; newText: string }[] }
-  | { type: 'get-file-key' }
   | { type: 'load-storage' }
   | { type: 'save-storage'; key: 'rules' | 'apiKey'; value: string }
-  | { type: 'insert-summary'; items: SummaryItem[] }

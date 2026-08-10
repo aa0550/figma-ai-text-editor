@@ -2,13 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import type { Suggestion, TextNode, PluginMessage, ScanScope } from '../shared/types'
 import { usePluginMessage, sendMessage, useNavigate } from './usePluginBridge'
 import { checkTextsWithAI } from './deepseek'
-import { requestStorage, saveRules, saveApiKey, saveFileUrl } from './storage'
-
-function extractFileKey(input: string): string {
-  const trimmed = input.trim()
-  const match = trimmed.match(/figma\.com\/(?:design|file)\/([a-zA-Z0-9]+)/)
-  return match ? match[1] : trimmed
-}
+import { requestStorage, saveRules, saveApiKey } from './storage'
 
 type Tab = 'scan' | 'results' | 'summary' | 'rules'
 type ScanState = 'idle' | 'scanning' | 'checking' | 'done' | 'error'
@@ -25,9 +19,8 @@ export default function App() {
   const [progress, setProgress] = useState({ done: 0, total: 0 })
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [errorMsg, setErrorMsg] = useState('')
-  const [fileUrl, setFileUrl] = useState('')
   const navigate = useNavigate()
-  const dirty = useRef({ rules: false, apiKey: false, fileUrl: false })
+  const dirty = useRef({ rules: false, apiKey: false })
   const abortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
@@ -41,7 +34,6 @@ export default function App() {
     if (msg.type === 'storage-data') {
       if (!dirty.current.rules) setRules(msg.rules)
       if (!dirty.current.apiKey) setApiKey(msg.apiKey)
-      if (!dirty.current.fileUrl) setFileUrl(msg.fileUrl)
     }
   }
 
@@ -120,13 +112,9 @@ export default function App() {
   function buildSummary(): string {
     const accepted = suggestions.filter((s) => s.accepted)
     if (accepted.length === 0) return ''
-    const fileKey = extractFileKey(fileUrl)
     const lines = accepted.map((s, i) => {
-      const nodeId = s.parentId.replace(/:/g, '-')
-      const link = fileKey
-        ? `https://www.figma.com/design/${fileKey}?node-id=${nodeId}`
-        : `?node-id=${nodeId}`
-      return `${i + 1}. ${link}\nБыло: ${s.original}\nСтало: ${s.suggested}\n${s.reason}`
+      const link = `?node-id=${s.parentId.replace(/:/g, '-')}`
+      return `${i + 1}. ${s.reason}\nБыло: ${s.original}\nСтало: ${s.suggested}\n${link}`
     })
     return lines.join('\n\n')
   }
@@ -169,12 +157,7 @@ export default function App() {
           />
         )}
         {tab === 'summary' && (
-          <SummaryTab
-            summary={buildSummary()}
-            hasSuggestions={suggestions.length > 0}
-            fileUrl={fileUrl}
-            onFileUrlChange={(v) => { dirty.current.fileUrl = true; setFileUrl(v); saveFileUrl(v) }}
-          />
+          <SummaryTab summary={buildSummary()} hasSuggestions={suggestions.length > 0} />
         )}
         {tab === 'rules' && (
           <RulesTab
@@ -392,10 +375,7 @@ function copyToClipboard(text: string) {
   document.body.removeChild(ta)
 }
 
-function SummaryTab({ summary, hasSuggestions, fileUrl, onFileUrlChange }: {
-  summary: string; hasSuggestions: boolean
-  fileUrl: string; onFileUrlChange: (v: string) => void
-}) {
+function SummaryTab({ summary, hasSuggestions }: { summary: string; hasSuggestions: boolean }) {
   const [copied, setCopied] = useState(false)
 
   function copy() {
@@ -404,28 +384,16 @@ function SummaryTab({ summary, hasSuggestions, fileUrl, onFileUrlChange }: {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  if (!summary) {
+    return <div style={{ ...styles.section, padding: '0 16px', alignItems: 'center', justifyContent: 'center' }}>
+      <p style={{ ...styles.status, fontSize: 12, textAlign: 'center' }}>{hasSuggestions ? 'Нет принятых изменений' : 'Нет предложений. Запустите проверку.'}</p>
+    </div>
+  }
+
   return (
     <div style={styles.section}>
-      <div style={styles.fieldGroup}>
-        <label style={styles.label}>Ссылка на файл Figma</label>
-        <input
-          type="text"
-          value={fileUrl}
-          onChange={(e) => onFileUrlChange(e.target.value)}
-          placeholder="https://www.figma.com/design/..."
-          style={styles.input}
-        />
-      </div>
-      {summary ? (
-        <>
-          <pre style={styles.summaryBox}>{summary}</pre>
-          <button className="btn-secondary" style={styles.secondary} onClick={copy}>{copied ? 'Скопировано!' : 'Копировать'}</button>
-        </>
-      ) : (
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <p style={{ ...styles.status, fontSize: 12, textAlign: 'center' }}>{hasSuggestions ? 'Нет принятых изменений' : 'Нет предложений. Запустите проверку.'}</p>
-        </div>
-      )}
+      <pre style={styles.summaryBox}>{summary}</pre>
+      <button className="btn-secondary" style={styles.secondary} onClick={copy}>{copied ? 'Скопировано!' : 'Копировать'}</button>
     </div>
   )
 }

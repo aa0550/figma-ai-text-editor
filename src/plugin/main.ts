@@ -33,16 +33,15 @@ function collectTextNodes(node: SceneNode, results: { id: string; text: string; 
   }
 }
 
-const STORAGE_KEYS = { rules: 'ux-editor-rules', apiKey: 'ux-editor-api-key', fileUrl: 'ux-editor-file-url' } as const
+const STORAGE_KEYS = { rules: 'ux-editor-rules', apiKey: 'ux-editor-api-key' } as const
 
 figma.ui.onmessage = async (msg) => {
   if (msg.type === 'load-storage') {
-    const [rules, apiKey, fileUrl] = await Promise.all([
+    const [rules, apiKey] = await Promise.all([
       figma.clientStorage.getAsync(STORAGE_KEYS.rules),
       figma.clientStorage.getAsync(STORAGE_KEYS.apiKey),
-      figma.clientStorage.getAsync(STORAGE_KEYS.fileUrl),
     ])
-    figma.ui.postMessage({ type: 'storage-data', rules: rules ?? '', apiKey: apiKey ?? '', fileUrl: fileUrl ?? '' })
+    figma.ui.postMessage({ type: 'storage-data', rules: rules ?? '', apiKey: apiKey ?? '' })
   }
 
   if (msg.type === 'save-storage') {

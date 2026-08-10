@@ -8,13 +8,15 @@ export async function checkTextsWithAI(
   rules: string,
   apiKey: string,
   onProgress: (done: number, total: number) => void,
+  signal?: AbortSignal,
 ): Promise<Suggestion[]> {
   const BATCH = 20
   const results: Suggestion[] = []
 
   for (let i = 0; i < nodes.length; i += BATCH) {
+    if (signal?.aborted) break
     const batch = nodes.slice(i, i + BATCH)
-    const batchResults = await checkBatch(batch, rules, apiKey)
+    const batchResults = await checkBatch(batch, rules, apiKey, 0, signal)
     results.push(...batchResults)
     onProgress(Math.min(i + BATCH, nodes.length), nodes.length)
   }
@@ -27,7 +29,7 @@ function extractJson(raw: string): string {
   return fenced ? fenced[1] : raw
 }
 
-async function checkBatch(nodes: TextNode[], rules: string, apiKey: string, attempt = 0): Promise<Suggestion[]> {
+async function checkBatch(nodes: TextNode[], rules: string, apiKey: string, attempt = 0, signal?: AbortSignal): Promise<Suggestion[]> {
   const textsJson = JSON.stringify(
     nodes.map((n) => ({ id: n.id, text: n.text })),
     null,
@@ -71,11 +73,13 @@ ${textsJson}
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.2,
       }),
+      signal,
     })
   } catch (e) {
+    if (signal?.aborted) throw e
     if (attempt < 3) {
       await new Promise((r) => setTimeout(r, 3000))
-      return checkBatch(nodes, rules, apiKey, attempt + 1)
+      return checkBatch(nodes, rules, apiKey, attempt + 1, signal)
     }
     throw new Error(`Не удалось связаться с DeepSeek API: ${e instanceof Error ? e.message : String(e)}`)
   }
@@ -86,7 +90,7 @@ ${textsJson}
       const retryAfter = Number(response.headers.get('retry-after'))
       const delaySec = retryAfter || Math.min(30, (attempt + 1) * 8)
       await new Promise((r) => setTimeout(r, delaySec * 1000))
-      return checkBatch(nodes, rules, apiKey, attempt + 1)
+      return checkBatch(nodes, rules, apiKey, attempt + 1, signal)
     }
     throw new Error(`DeepSeek API error ${response.status}: ${err}`)
   }

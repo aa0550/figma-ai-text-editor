@@ -22,6 +22,7 @@ export default function App() {
   const [fileKey, setFileKey] = useState<string | null>(null)
   const navigate = useNavigate()
   const dirty = useRef({ rules: false, apiKey: false })
+  const abortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     requestStorage()
@@ -51,14 +52,21 @@ export default function App() {
     }
     setScanState('checking')
     setProgress({ done: 0, total: nonEmpty.length })
+    const controller = new AbortController()
+    abortRef.current = controller
     try {
       const results = await checkTextsWithAI(nonEmpty, rules, apiKey, (done, total) => {
         setProgress({ done, total })
-      })
+      }, controller.signal)
+      if (controller.signal.aborted) return
       setSuggestions(results)
       setScanState('done')
       if (results.length > 0) setTab('results')
     } catch (e) {
+      if (controller.signal.aborted) {
+        setScanState('idle')
+        return
+      }
       setErrorMsg(e instanceof Error ? e.message : String(e))
       setScanState('error')
     }
@@ -72,6 +80,10 @@ export default function App() {
     setSuggestions([])
     sendMessage({ type: 'get-file-key' })
     sendMessage({ type: 'start-scan', scope, onlyVisible })
+  }
+
+  function stopScan() {
+    abortRef.current?.abort()
   }
 
   function updateSuggestion(nodeId: string, patch: Partial<Suggestion>) {
@@ -96,14 +108,13 @@ export default function App() {
   function buildSummary(): string {
     const accepted = suggestions.filter((s) => s.accepted)
     if (accepted.length === 0) return ''
-    const date = new Date().toLocaleDateString('ru-RU')
     const lines = accepted.map((s, i) => {
       const link = fileKey
         ? `https://www.figma.com/design/${fileKey}?node-id=${encodeURIComponent(s.parentId)}`
         : `node-id: ${s.parentId}`
       return `${i + 1}. ${link}\nБыло: ${s.original}\nСтало: ${s.suggested}\n${s.reason}`
     })
-    return `Изменения текстов — ${date}\n\n${lines.join('\n\n')}`
+    return lines.join('\n\n')
   }
 
   return (
@@ -127,6 +138,7 @@ export default function App() {
             progress={progress}
             error={errorMsg}
             onStart={startScan}
+            onStop={stopScan}
             onRetry={() => { setScanState('idle'); setErrorMsg('') }}
           />
         )}
@@ -223,10 +235,10 @@ function RulesTab({ rules, apiKey, onRulesChange, onApiKeyChange, scope, onScope
   )
 }
 
-function ScanTab({ state, progress, error, onStart, onRetry }: {
+function ScanTab({ state, progress, error, onStart, onStop, onRetry }: {
   state: ScanState; progress: { done: number; total: number }
   error: string
-  onStart: () => void; onRetry: () => void
+  onStart: () => void; onStop: () => void; onRetry: () => void
 }) {
   return (
     <div style={{ ...styles.section, alignItems: 'center', justifyContent: 'center', height: '100%' }}>
@@ -235,11 +247,14 @@ function ScanTab({ state, progress, error, onStart, onRetry }: {
       )}
       {state === 'scanning' && <Spinner />}
       {state === 'checking' && (
-        <Spinner label={`Проверка ${progress.done} / ${progress.total}`} labelStyle={styles.status} />
+        <>
+          <Spinner label={`Проверка ${progress.done} / ${progress.total}`} labelStyle={styles.status} />
+          <button style={styles.secondary} onClick={onStop}>Остановить</button>
+        </>
       )}
       {state === 'error' && (
         <>
-          <p style={{ color: '#DC2626', fontSize: 13, textAlign: 'center' }}>{error}</p>
+          <p style={{ color: '#F24822', fontSize: 11, textAlign: 'center' }}>{error}</p>
           <button style={styles.secondary} onClick={onRetry}>Попробовать снова</button>
         </>
       )}
@@ -422,48 +437,48 @@ function Select<T extends string>({ value, onChange, options }: {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  root: { display: 'flex', flexDirection: 'column', height: '100vh', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontSize: 13, color: '#111827', background: '#fff' },
-  nav: { display: 'flex', gap: 2, margin: '12px 12px 0', padding: 4, background: '#F2F2F2', borderRadius: 12 },
-  navBtn: { flex: 1, padding: '8px 4px', border: 'none', background: 'transparent', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#111827', transition: 'background 0.15s, color 0.15s' },
-  navActive: { background: '#fff', color: '#111827', boxShadow: '0 1px 3px rgba(16,24,40,0.12), 0 1px 2px rgba(16,24,40,0.08)' },
+  root: { display: 'flex', flexDirection: 'column', height: '100vh', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontSize: 11, color: '#1E1E1E', background: '#fff' },
+  nav: { display: 'flex', gap: 2, margin: '12px 12px 0', padding: 4, background: '#F2F2F2', borderRadius: 8 },
+  navBtn: { flex: 1, padding: '7px 4px', border: 'none', background: 'transparent', borderRadius: 6, cursor: 'pointer', fontSize: 11, fontWeight: 600, color: '#1E1E1E', transition: 'background 0.15s, color 0.15s' },
+  navActive: { background: '#fff', color: '#1E1E1E', boxShadow: '0 1px 2px rgba(0,0,0,0.15)' },
   content: { flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' },
   section: { display: 'flex', flexDirection: 'column', padding: 16, gap: 16, height: '100%', boxSizing: 'border-box', background: '#fff' },
-  label: { fontWeight: 600, fontSize: 12, color: '#374151', marginBottom: 2 },
-  input: { border: '1px solid #E5E7EB', background: '#F9FAFB', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box', color: '#111827' },
-  textarea: { border: '1px solid #E5E7EB', background: '#F9FAFB', borderRadius: 10, padding: '10px 12px', fontSize: 13, resize: 'vertical', minHeight: 240, outline: 'none', lineHeight: 1.6, width: '100%', boxSizing: 'border-box', color: '#111827' },
-  textareaGrow: { border: '1px solid #E5E7EB', background: '#F9FAFB', borderRadius: 10, padding: '10px 12px', fontSize: 13, resize: 'none', outline: 'none', lineHeight: 1.6, width: '100%', boxSizing: 'border-box', color: '#111827', flex: 1 },
-  hint: { fontSize: 12, color: '#9CA3AF', margin: 0 },
-  status: { fontSize: 12, color: '#111827', margin: 0 },
-  link: { fontSize: 12, color: '#4D6BFE', textDecoration: 'none', fontWeight: 500, marginTop: -1 },
+  label: { fontWeight: 600, fontSize: 11, color: '#1E1E1E', marginBottom: 2 },
+  input: { border: '1px solid #E6E6E6', background: '#F5F5F5', borderRadius: 6, padding: '8px 10px', fontSize: 11, outline: 'none', width: '100%', boxSizing: 'border-box', color: '#1E1E1E' },
+  textarea: { border: '1px solid #E6E6E6', background: '#F5F5F5', borderRadius: 6, padding: '9px 10px', fontSize: 11, resize: 'vertical', minHeight: 240, outline: 'none', lineHeight: 1.6, width: '100%', boxSizing: 'border-box', color: '#1E1E1E' },
+  textareaGrow: { border: '1px solid #E6E6E6', background: '#F5F5F5', borderRadius: 6, padding: '9px 10px', fontSize: 11, resize: 'none', outline: 'none', lineHeight: 1.6, width: '100%', boxSizing: 'border-box', color: '#1E1E1E', flex: 1 },
+  hint: { fontSize: 11, color: '#8C8C8C', margin: 0 },
+  status: { fontSize: 11, color: '#1E1E1E', margin: 0 },
+  link: { fontSize: 11, color: '#0D99FF', textDecoration: 'none', fontWeight: 500, marginTop: -1 },
   fieldHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   fieldGroup: { display: 'flex', flexDirection: 'column', gap: 6 },
   optionsBlock: { display: 'flex', flexDirection: 'row', gap: 8, width: '100%' },
   selectWrap: { position: 'relative', flex: 1 },
-  select: { border: '1px solid #E5E7EB', background: '#F9FAFB', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box', color: '#111827', fontFamily: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, textAlign: 'left' },
-  selectArrow: { fontSize: 10, color: '#9CA3AF' },
-  selectMenu: { position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: '#fff', border: '1px solid #E5E7EB', borderRadius: 10, boxShadow: '0 4px 12px rgba(16,24,40,0.12)', padding: 4, zIndex: 10 },
-  selectOption: { padding: '8px 10px', borderRadius: 8, fontSize: 13, color: '#111827', cursor: 'pointer' },
-  selectOptionActive: { background: 'rgba(77,107,254,0.08)', color: '#4D6BFE', fontWeight: 600 },
-  primary: { background: '#4D6BFE', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', cursor: 'pointer', fontWeight: 600, fontSize: 13, boxShadow: '0 1px 2px rgba(16,24,40,0.06)' },
-  secondary: { background: '#fff', color: '#374151', border: '1px solid #E5E7EB', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 500 },
+  select: { border: '1px solid #E6E6E6', background: '#F5F5F5', borderRadius: 6, padding: '8px 10px', fontSize: 11, outline: 'none', width: '100%', boxSizing: 'border-box', color: '#1E1E1E', fontFamily: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, textAlign: 'left' },
+  selectArrow: { fontSize: 9, color: '#8C8C8C' },
+  selectMenu: { position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: '#fff', border: '1px solid #E6E6E6', borderRadius: 6, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', padding: 4, zIndex: 10 },
+  selectOption: { padding: '7px 8px', borderRadius: 4, fontSize: 11, color: '#1E1E1E', cursor: 'pointer' },
+  selectOptionActive: { background: 'rgba(13,153,255,0.1)', color: '#0D99FF', fontWeight: 600 },
+  primary: { background: '#0D99FF', color: '#fff', border: 'none', borderRadius: 6, padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: 11 },
+  secondary: { background: '#fff', color: '#1E1E1E', border: '1px solid #E6E6E6', borderRadius: 6, padding: '7px 12px', cursor: 'pointer', fontSize: 11, fontWeight: 500 },
   resultsHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  list: { display: 'flex', flexDirection: 'column', gap: 10, overflow: 'auto' },
-  card: { border: '1px solid #E5E7EB', borderRadius: 12, padding: 14, display: 'flex', flexDirection: 'column', gap: 8, transition: 'opacity 0.2s', background: '#fff', boxShadow: '0 1px 2px rgba(16,24,40,0.04)' },
+  list: { display: 'flex', flexDirection: 'column', gap: 8, overflow: 'auto' },
+  card: { border: '1px solid #E6E6E6', borderRadius: 6, padding: 12, display: 'flex', flexDirection: 'column', gap: 8, transition: 'opacity 0.2s', background: '#fff' },
   cardMeta: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' },
-  frameName: { fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: 0.5 },
-  navArrow: { fontSize: 11, color: '#4D6BFE' },
+  frameName: { fontSize: 10, fontWeight: 600, color: '#8C8C8C', textTransform: 'uppercase', letterSpacing: 0.5 },
+  navArrow: { fontSize: 11, color: '#0D99FF' },
   diff: { display: 'flex', flexDirection: 'column', gap: 4 },
-  diffOld: { background: '#F9FAFB', borderRadius: 8, padding: '6px 8px', fontSize: 13, color: '#111827', lineHeight: 1.5 },
-  diffNew: { background: '#F9FAFB', borderRadius: 8, padding: '6px 8px', fontSize: 13, color: '#111827', lineHeight: 1.5 },
-  diffLabel: { fontSize: 10, fontWeight: 700, marginRight: 6, color: '#9CA3AF', textTransform: 'uppercase' },
-  diffOldMark: { background: 'rgba(156,163,175,0.2)', color: '#9CA3AF', textDecoration: 'line-through', borderRadius: 3, padding: '0 2px' },
-  diffNewMark: { background: 'rgba(77,107,254,0.12)', color: '#4D6BFE', fontWeight: 700, borderRadius: 3, padding: '0 2px' },
-  reason: { fontSize: 11, color: '#111827' },
+  diffOld: { background: '#F5F5F5', borderRadius: 4, padding: '6px 8px', fontSize: 11, color: '#1E1E1E', lineHeight: 1.5 },
+  diffNew: { background: '#F5F5F5', borderRadius: 4, padding: '6px 8px', fontSize: 11, color: '#1E1E1E', lineHeight: 1.5 },
+  diffLabel: { fontSize: 9, fontWeight: 700, marginRight: 6, color: '#8C8C8C', textTransform: 'uppercase' },
+  diffOldMark: { background: 'rgba(140,140,140,0.2)', color: '#8C8C8C', textDecoration: 'line-through', borderRadius: 3, padding: '0 2px' },
+  diffNewMark: { background: 'rgba(13,153,255,0.12)', color: '#0D99FF', fontWeight: 700, borderRadius: 3, padding: '0 2px' },
+  reason: { fontSize: 10, color: '#1E1E1E' },
   cardActions: { display: 'flex', gap: 8 },
-  acceptBtn: { flex: 1, background: '#4D6BFE', color: '#fff', border: 'none', borderRadius: 8, padding: '6px', cursor: 'pointer', fontWeight: 600, fontSize: 12 },
-  skipBtn: { flex: 1, background: '#fff', color: '#6B7280', border: '1px solid #E5E7EB', borderRadius: 8, padding: '6px', cursor: 'pointer', fontSize: 12 },
-  statusDone: { fontSize: 12, color: '#067647', fontWeight: 600 },
-  statusSkip: { fontSize: 12, color: '#9CA3AF' },
-  summaryBox: { background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 10, padding: 14, fontSize: 12, lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word', flex: 1, overflow: 'auto', margin: 0, color: '#374151' },
-  spinner: { width: 28, height: 28, border: '3px solid #E5E7EB', borderTop: '3px solid #4D6BFE', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' },
+  acceptBtn: { flex: 1, background: '#0D99FF', color: '#fff', border: 'none', borderRadius: 6, padding: '6px', cursor: 'pointer', fontWeight: 600, fontSize: 11 },
+  skipBtn: { flex: 1, background: '#fff', color: '#8C8C8C', border: '1px solid #E6E6E6', borderRadius: 6, padding: '6px', cursor: 'pointer', fontSize: 11 },
+  statusDone: { fontSize: 11, color: '#14AE5C', fontWeight: 600 },
+  statusSkip: { fontSize: 11, color: '#8C8C8C' },
+  summaryBox: { background: '#F5F5F5', border: '1px solid #E6E6E6', borderRadius: 6, padding: 12, fontSize: 11, lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word', flex: 1, overflow: 'auto', margin: 0, color: '#1E1E1E' },
+  spinner: { width: 24, height: 24, border: '3px solid #E6E6E6', borderTop: '3px solid #0D99FF', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' },
 }

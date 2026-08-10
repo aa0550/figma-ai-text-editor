@@ -9,7 +9,7 @@ style.textContent = `
   body { overflow: hidden; }
   button, select { outline: none; }
   button:focus, select:focus { outline: none; }
-  .select-option:hover { background: rgba(77,107,254,0.08); color: #4D6BFE; }
+  .select-option:hover { background: rgba(13,153,255,0.1); color: #0D99FF; }
 `
 document.head.appendChild(style)
 

@@ -1,7 +1,7 @@
 import type { TextNode, Suggestion } from '../shared/types'
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
-const MODEL = 'x-ai/grok-4'
+const MODEL = 'deepseek/deepseek-chat'
 
 export async function checkTextsWithAI(
   nodes: TextNode[],

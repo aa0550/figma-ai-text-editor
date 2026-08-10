@@ -126,10 +126,6 @@ export default function App() {
             state={scanState}
             progress={progress}
             error={errorMsg}
-            scope={scope}
-            onScopeChange={setScope}
-            onlyVisible={onlyVisible}
-            onOnlyVisibleChange={setOnlyVisible}
             onStart={startScan}
             onRetry={() => { setScanState('idle'); setErrorMsg('') }}
           />
@@ -152,6 +148,10 @@ export default function App() {
             apiKey={apiKey}
             onRulesChange={(v) => { dirty.current.rules = true; setRules(v); saveRules(v) }}
             onApiKeyChange={(v) => { dirty.current.apiKey = true; setApiKey(v); saveApiKey(v) }}
+            scope={scope}
+            onScopeChange={setScope}
+            onlyVisible={onlyVisible}
+            onOnlyVisibleChange={setOnlyVisible}
           />
         )}
       </div>
@@ -160,12 +160,14 @@ export default function App() {
 }
 
 function tabLabel(t: Tab) {
-  return { rules: 'Правила', scan: 'Проверка', results: 'Результаты', summary: 'Саммари' }[t]
+  return { rules: 'Настройки', scan: 'Проверка', results: 'Результаты', summary: 'Саммари' }[t]
 }
 
-function RulesTab({ rules, apiKey, onRulesChange, onApiKeyChange }: {
+function RulesTab({ rules, apiKey, onRulesChange, onApiKeyChange, scope, onScopeChange, onlyVisible, onOnlyVisibleChange }: {
   rules: string; apiKey: string
   onRulesChange: (v: string) => void; onApiKeyChange: (v: string) => void
+  scope: ScanScope; onScopeChange: (v: ScanScope) => void
+  onlyVisible: boolean; onOnlyVisibleChange: (v: boolean) => void
 }) {
   return (
     <div style={styles.section}>
@@ -184,6 +186,24 @@ function RulesTab({ rules, apiKey, onRulesChange, onApiKeyChange }: {
           style={styles.input}
         />
       </div>
+      <div style={styles.optionsBlock}>
+        <SegmentedToggle
+          value={scope}
+          onChange={onScopeChange}
+          options={[
+            { value: 'page', label: 'Текущая страница' },
+            { value: 'selection', label: 'Только выделенное' },
+          ]}
+        />
+        <SegmentedToggle
+          value={onlyVisible ? 'visible' : 'all'}
+          onChange={(v) => onOnlyVisibleChange(v === 'visible')}
+          options={[
+            { value: 'all', label: 'Все элементы' },
+            { value: 'visible', label: 'Только видимые' },
+          ]}
+        />
+      </div>
       <div style={{ ...styles.fieldGroup, flex: 1 }}>
         <label style={styles.label}>Правила и Tone of Voice</label>
         <textarea
@@ -197,37 +217,15 @@ function RulesTab({ rules, apiKey, onRulesChange, onApiKeyChange }: {
   )
 }
 
-function ScanTab({ state, progress, error, scope, onScopeChange, onlyVisible, onOnlyVisibleChange, onStart, onRetry }: {
+function ScanTab({ state, progress, error, onStart, onRetry }: {
   state: ScanState; progress: { done: number; total: number }
   error: string
-  scope: ScanScope; onScopeChange: (v: ScanScope) => void
-  onlyVisible: boolean; onOnlyVisibleChange: (v: boolean) => void
   onStart: () => void; onRetry: () => void
 }) {
   return (
     <div style={{ ...styles.section, alignItems: 'center', justifyContent: 'center', height: '100%' }}>
       {state === 'idle' && (
-        <>
-          <div style={styles.optionsBlock}>
-            <SegmentedToggle
-              value={scope}
-              onChange={onScopeChange}
-              options={[
-                { value: 'page', label: 'Текущая страница' },
-                { value: 'selection', label: 'Только выделенное' },
-              ]}
-            />
-            <SegmentedToggle
-              value={onlyVisible ? 'visible' : 'all'}
-              onChange={(v) => onOnlyVisibleChange(v === 'visible')}
-              options={[
-                { value: 'all', label: 'Все элементы' },
-                { value: 'visible', label: 'Только видимые' },
-              ]}
-            />
-          </div>
-          <button style={styles.primary} onClick={onStart}>Запустить проверку</button>
-        </>
+        <button style={styles.primary} onClick={onStart}>Проверить</button>
       )}
       {state === 'scanning' && <Spinner label="Сканирование текстов..." />}
       {state === 'checking' && (
@@ -261,7 +259,7 @@ function ResultsTab({ suggestions, onNavigate, onAccept, onSkip, onAcceptAll }: 
 
   if (suggestions.length === 0) {
     return <div style={{ ...styles.section, alignItems: 'center', justifyContent: 'center' }}>
-      <p style={styles.status}>Нет предложений. Запустите проверку.</p>
+      <p style={{ ...styles.status, fontSize: 12 }}>Нет предложений. Запустите проверку.</p>
     </div>
   }
 
@@ -403,9 +401,9 @@ function SegmentedToggle<T extends string>({ value, onChange, options }: {
 
 const styles: Record<string, React.CSSProperties> = {
   root: { display: 'flex', flexDirection: 'column', height: '100vh', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontSize: 13, color: '#111827', background: '#F7F8FA' },
-  nav: { display: 'flex', gap: 2, margin: '12px 12px 0', padding: 4, background: 'rgba(0,0,0,0.05)', borderRadius: 12 },
-  navBtn: { flex: 1, padding: '8px 4px', border: 'none', background: 'transparent', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#111827', transition: 'background 0.15s, color 0.15s' },
-  navActive: { background: '#fff', color: '#111827', boxShadow: '0 1px 2px rgba(16,24,40,0.08)' },
+  nav: { display: 'flex', gap: 20, margin: '12px 16px 0', borderBottom: '1px solid #E5E7EB' },
+  navBtn: { flex: 'none', padding: '0 0 10px', marginBottom: -1, border: 'none', borderBottom: '2px solid transparent', background: 'transparent', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#111827', transition: 'border-color 0.15s' },
+  navActive: { borderBottom: '2px solid #4D6BFE' },
   content: { flex: 1, overflow: 'auto', padding: 12, display: 'flex', flexDirection: 'column' },
   section: { display: 'flex', flexDirection: 'column', padding: 16, gap: 16, height: '100%', boxSizing: 'border-box', background: '#fff', border: '1px solid #E5E7EB', borderRadius: 14, boxShadow: '0 1px 2px rgba(16,24,40,0.04)' },
   label: { fontWeight: 600, fontSize: 12, color: '#374151', marginBottom: 2 },
@@ -418,9 +416,9 @@ const styles: Record<string, React.CSSProperties> = {
   fieldHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   fieldGroup: { display: 'flex', flexDirection: 'column', gap: 8 },
   optionsBlock: { display: 'flex', flexDirection: 'column', gap: 6, width: '100%' },
-  toggleGroup: { display: 'flex', gap: 2, padding: 4, background: 'rgba(0,0,0,0.05)', borderRadius: 12 },
-  toggleBtn: { flex: 1, padding: '8px 4px', border: 'none', background: 'transparent', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#111827', transition: 'background 0.15s, color 0.15s' },
-  toggleActive: { background: '#fff', color: '#111827', boxShadow: '0 1px 2px rgba(16,24,40,0.08)' },
+  toggleGroup: { display: 'flex', gap: 16, borderBottom: '1px solid #E5E7EB' },
+  toggleBtn: { flex: 1, padding: '0 0 8px', marginBottom: -1, border: 'none', borderBottom: '2px solid transparent', background: 'transparent', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#111827', transition: 'border-color 0.15s' },
+  toggleActive: { borderBottom: '2px solid #4D6BFE' },
   primary: { background: '#4D6BFE', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', cursor: 'pointer', fontWeight: 600, fontSize: 13, boxShadow: '0 1px 2px rgba(16,24,40,0.06)' },
   secondary: { background: '#fff', color: '#374151', border: '1px solid #E5E7EB', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 500 },
   resultsHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },

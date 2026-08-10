@@ -267,7 +267,6 @@ function ResultsTab({ suggestions, onNavigate, onAccept, onSkip, onAcceptAll }: 
     <div style={{ ...styles.section, padding: '12px 12px 0' }}>
       <div style={styles.resultsHeader}>
         <span style={styles.status}>{pending.length} ожидают · {accepted.length} принято</span>
-        {pending.length > 0 && <button style={styles.secondary} onClick={onAcceptAll}>Принять все</button>}
       </div>
       <div style={styles.list}>
         {suggestions.map((s) => (
@@ -280,6 +279,7 @@ function ResultsTab({ suggestions, onNavigate, onAccept, onSkip, onAcceptAll }: 
           />
         ))}
       </div>
+      {pending.length > 0 && <button style={styles.secondary} onClick={onAcceptAll}>Принять все</button>}
     </div>
   )
 }
@@ -423,7 +423,7 @@ function Select<T extends string>({ value, onChange, options }: {
 
 const styles: Record<string, React.CSSProperties> = {
   root: { display: 'flex', flexDirection: 'column', height: '100vh', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontSize: 13, color: '#111827', background: '#fff' },
-  nav: { display: 'flex', gap: 2, margin: '12px 12px 0', padding: 4, background: '#F2F3F5', borderRadius: 12 },
+  nav: { display: 'flex', gap: 2, margin: '12px 12px 0', padding: 4, background: '#F2F2F2', borderRadius: 12 },
   navBtn: { flex: 1, padding: '8px 4px', border: 'none', background: 'transparent', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#111827', transition: 'background 0.15s, color 0.15s' },
   navActive: { background: '#fff', color: '#111827', boxShadow: '0 1px 3px rgba(16,24,40,0.12), 0 1px 2px rgba(16,24,40,0.08)' },
   content: { flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' },
@@ -433,7 +433,7 @@ const styles: Record<string, React.CSSProperties> = {
   textarea: { border: '1px solid #E5E7EB', background: '#F9FAFB', borderRadius: 10, padding: '10px 12px', fontSize: 13, resize: 'vertical', minHeight: 240, outline: 'none', lineHeight: 1.6, width: '100%', boxSizing: 'border-box', color: '#111827' },
   textareaGrow: { border: '1px solid #E5E7EB', background: '#F9FAFB', borderRadius: 10, padding: '10px 12px', fontSize: 13, resize: 'none', outline: 'none', lineHeight: 1.6, width: '100%', boxSizing: 'border-box', color: '#111827', flex: 1 },
   hint: { fontSize: 12, color: '#9CA3AF', margin: 0 },
-  status: { fontSize: 12, color: '#111827', margin: 0 },
+  status: { fontSize: 12, color: '#111827', fontWeight: 700, margin: 0 },
   link: { fontSize: 12, color: '#4D6BFE', textDecoration: 'none', fontWeight: 500, marginTop: -1 },
   fieldHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   fieldGroup: { display: 'flex', flexDirection: 'column', gap: 6 },

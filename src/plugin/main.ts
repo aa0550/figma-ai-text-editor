@@ -121,8 +121,6 @@ figma.ui.onmessage = async (msg) => {
     node.characters = text
     for (const link of links) {
       node.setRangeHyperlink(link.start, link.end, { type: 'NODE', value: link.nodeId })
-      node.setRangeFills(link.start, link.end, [{ type: 'SOLID', color: { r: 0.051, g: 0.6, b: 1 } }])
-      node.setRangeTextDecoration(link.start, link.end, 'UNDERLINE')
     }
 
     node.textAutoResize = 'HEIGHT'
@@ -132,8 +130,6 @@ figma.ui.onmessage = async (msg) => {
 
     figma.currentPage.selection = [node]
     figma.viewport.scrollAndZoomIntoView([node])
-
-    const check = links.map((l) => JSON.stringify(node.getRangeHyperlink(l.start, l.end)))
-    figma.notify(`Саммари вставлено ✓ | link check: ${check.join(' | ')}`)
+    figma.notify('Саммари вставлено на страницу ✓')
   }
 }

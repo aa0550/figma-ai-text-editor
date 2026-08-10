@@ -11,3 +11,7 @@ export function saveRules(rules: string) {
 export function saveApiKey(key: string) {
   sendMessage({ type: 'save-storage', key: 'apiKey', value: key })
 }
+
+export function saveFileUrl(url: string) {
+  sendMessage({ type: 'save-storage', key: 'fileUrl', value: url })
+}

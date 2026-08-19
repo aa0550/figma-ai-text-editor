@@ -5,7 +5,8 @@
   "main": "dist/main.js",
   "ui": "dist/index.html",
   "networkAccess": {
-    "allowedDomains": ["https://api.deepseek.com"]
+    "allowedDomains": ["https://api.deepseek.com", "*"],
+    "reasoning": "Fetches user-provided .md rule files from arbitrary URLs (e.g. GitHub raw links) in addition to calling the DeepSeek API."
   },
   "editorType": ["figma"]
 }

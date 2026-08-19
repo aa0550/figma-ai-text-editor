@@ -35,6 +35,8 @@ export interface Strings {
   visibilityVisible: string
   rulesLabel: string
   rulesPlaceholder: string
+  ruleFetchError: (msg: string) => string
+  fileUrlLabel: string
   languageLabel: string
   langRu: string
   langEn: string
@@ -75,7 +77,9 @@ export const STRINGS: Record<Lang, Strings> = {
     visibilityAll: 'Все элементы',
     visibilityVisible: 'Только видимые',
     rulesLabel: 'Правила и Tone of Voice',
-    rulesPlaceholder: 'Опишите правила написания текстов: обращение к пользователю, пунктуация, стиль, запрещённые слова и т.д.',
+    rulesPlaceholder: 'Укажите правила текстом или ссылкой на md-файл',
+    ruleFetchError: (msg: string) => `Не удалось загрузить: ${msg}`,
+    fileUrlLabel: 'Ссылка на текущий Figma-файл для формирования ссылок саммари',
     languageLabel: 'Язык',
     langRu: 'Русский',
     langEn: 'English',
@@ -114,7 +118,9 @@ export const STRINGS: Record<Lang, Strings> = {
     visibilityAll: 'All elements',
     visibilityVisible: 'Visible only',
     rulesLabel: 'Rules & Tone of Voice',
-    rulesPlaceholder: 'Describe your writing rules: how to address the user, punctuation, style, forbidden words, etc.',
+    rulesPlaceholder: 'Write rules as text or as links to .md files (one per line). If rules can conflict, label each one explicitly: "Priority rule:" / "Secondary rule:".',
+    ruleFetchError: (msg: string) => `Failed to load: ${msg}`,
+    fileUrlLabel: 'Current Figma file link for building summary links',
     languageLabel: 'Language',
     langRu: 'Русский',
     langEn: 'English',

@@ -4,7 +4,8 @@ import type { Lang, Strings } from '../shared/i18n'
 import { STRINGS } from '../shared/i18n'
 import { usePluginMessage, sendMessage, useNavigate } from './usePluginBridge'
 import { checkTextsWithAI } from './deepseek'
-import { requestStorage, saveRules, saveApiKey, saveLang, saveScanOptions } from './storage'
+import { requestStorage, saveRules, saveApiKey, saveFileUrl, saveLang, saveScanOptions } from './storage'
+import { resolveRulesText } from './rules'
 
 type Tab = 'scan' | 'results' | 'summary' | 'rules'
 type ScanState = 'idle' | 'scanning' | 'checking' | 'done' | 'error'
@@ -15,6 +16,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('scan')
   const [rules, setRules] = useState('')
   const [apiKey, setApiKey] = useState('')
+  const [fileUrl, setFileUrl] = useState('')
   const [lang, setLang] = useState<Lang>('ru')
   const [scanState, setScanState] = useState<ScanState>('idle')
   const [scope, setScope] = useState<ScanScope>('page')
@@ -23,7 +25,7 @@ export default function App() {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [errorMsg, setErrorMsg] = useState('')
   const navigate = useNavigate()
-  const dirty = useRef({ rules: false, apiKey: false, lang: false, scanOptions: false })
+  const dirty = useRef({ rules: false, apiKey: false, fileUrl: false, lang: false, scanOptions: false })
   const abortRef = useRef<AbortController | null>(null)
   const L = STRINGS[lang]
 
@@ -38,6 +40,7 @@ export default function App() {
     if (msg.type === 'storage-data') {
       if (!dirty.current.rules) setRules(msg.rules)
       if (!dirty.current.apiKey) setApiKey(msg.apiKey)
+      if (!dirty.current.fileUrl) setFileUrl(msg.fileUrl)
       if (!dirty.current.lang) setLang(msg.lang)
       if (!dirty.current.scanOptions) {
         setScope(msg.scope)
@@ -60,7 +63,13 @@ export default function App() {
     const controller = new AbortController()
     abortRef.current = controller
     try {
-      const results = await checkTextsWithAI(nonEmpty, rules, apiKey, lang, (done, total) => {
+      const { combined, errors } = await resolveRulesText(rules)
+      if (errors.length > 0) {
+        setErrorMsg(L.ruleFetchError(errors.map((e) => `${e.url}: ${e.error}`).join('; ')))
+        setScanState('error')
+        return
+      }
+      const results = await checkTextsWithAI(nonEmpty, combined, apiKey, lang, (done, total) => {
         setProgress({ done, total })
       }, controller.signal)
       if (controller.signal.aborted) return
@@ -122,7 +131,9 @@ export default function App() {
     const accepted = suggestions.filter((s) => s.accepted)
     if (accepted.length === 0) return ''
     const lines = accepted.map((s, i) => {
-      const link = `?node-id=${s.parentId.replace(/:/g, '-')}`
+      const nodeParam = `node-id=${s.parentId.replace(/:/g, '-')}`
+      const base = fileUrl.trim()
+      const link = base ? `${base}${base.includes('?') ? '&' : '?'}${nodeParam}` : `?${nodeParam}`
       return `${i + 1}. ${s.reason}\n${L.before}${s.original}\n${L.after}${s.suggested}\n${link}`
     })
     return lines.join('\n\n')
@@ -168,16 +179,22 @@ export default function App() {
           />
         )}
         {tab === 'summary' && (
-          <SummaryTab L={L} summary={buildSummary()} hasSuggestions={suggestions.length > 0} />
+          <SummaryTab
+            L={L}
+            summary={buildSummary()}
+            hasSuggestions={suggestions.length > 0}
+          />
         )}
         {tab === 'rules' && (
           <RulesTab
             L={L}
             rules={rules}
             apiKey={apiKey}
+            fileUrl={fileUrl}
             lang={lang}
             onRulesChange={(v) => { dirty.current.rules = true; setRules(v); saveRules(v) }}
             onApiKeyChange={(v) => { dirty.current.apiKey = true; setApiKey(v); saveApiKey(v) }}
+            onFileUrlChange={(v) => { dirty.current.fileUrl = true; setFileUrl(v); saveFileUrl(v) }}
             onLangChange={(v) => { dirty.current.lang = true; setLang(v); saveLang(v) }}
             scope={scope}
             onScopeChange={(v) => { dirty.current.scanOptions = true; setScope(v); saveScanOptions(v, onlyVisible) }}
@@ -194,38 +211,21 @@ function tabLabel(t: Tab, L: Strings) {
   return { rules: L.navRules, scan: L.navScan, results: L.navResults, summary: L.navSummary }[t]
 }
 
-function RulesTab({ L, rules, apiKey, lang, onRulesChange, onApiKeyChange, onLangChange, scope, onScopeChange, onlyVisible, onOnlyVisibleChange }: {
+function RulesTab({ L, rules, apiKey, fileUrl, lang, onRulesChange, onApiKeyChange, onFileUrlChange, onLangChange, scope, onScopeChange, onlyVisible, onOnlyVisibleChange }: {
   L: Strings
-  rules: string; apiKey: string; lang: Lang
-  onRulesChange: (v: string) => void; onApiKeyChange: (v: string) => void; onLangChange: (v: Lang) => void
+  rules: string; apiKey: string; fileUrl: string; lang: Lang
+  onRulesChange: (v: string) => void; onApiKeyChange: (v: string) => void; onFileUrlChange: (v: string) => void; onLangChange: (v: Lang) => void
   scope: ScanScope; onScopeChange: (v: ScanScope) => void
   onlyVisible: boolean; onOnlyVisibleChange: (v: boolean) => void
 }) {
   return (
     <div style={styles.section}>
       <div style={styles.fieldGroup}>
-        <label style={styles.label}>{L.languageLabel}</label>
-        <Select
-          value={lang}
-          onChange={onLangChange}
-          options={[
-            { value: 'ru', label: L.langRu },
-            { value: 'en', label: L.langEn },
-          ]}
-        />
-      </div>
-      <div style={styles.fieldGroup}>
-        <div style={styles.fieldHeader}>
-          <label style={styles.label}>{L.apiKeyLabel}</label>
-          <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noreferrer" className="key-link" style={styles.link}>
-            {L.getKey}
-          </a>
-        </div>
+        <label style={styles.label}>{L.fileUrlLabel}</label>
         <input
-          type="password"
-          value={apiKey}
-          onChange={(e) => onApiKeyChange(e.target.value.trim())}
-          placeholder="sk-..."
+          type="text"
+          value={fileUrl}
+          onChange={(e) => onFileUrlChange(e.target.value.trim())}
           style={styles.input}
         />
       </div>
@@ -252,6 +252,32 @@ function RulesTab({ L, rules, apiKey, lang, onRulesChange, onApiKeyChange, onLan
             ]}
           />
         </div>
+      </div>
+      <div style={styles.fieldGroup}>
+        <label style={styles.label}>{L.languageLabel}</label>
+        <Select
+          value={lang}
+          onChange={onLangChange}
+          options={[
+            { value: 'ru', label: L.langRu },
+            { value: 'en', label: L.langEn },
+          ]}
+        />
+      </div>
+      <div style={styles.fieldGroup}>
+        <div style={styles.fieldHeader}>
+          <label style={styles.label}>{L.apiKeyLabel}</label>
+          <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noreferrer" className="key-link" style={styles.link}>
+            {L.getKey}
+          </a>
+        </div>
+        <input
+          type="password"
+          value={apiKey}
+          onChange={(e) => onApiKeyChange(e.target.value.trim())}
+          placeholder="sk-..."
+          style={styles.input}
+        />
       </div>
       <div style={{ ...styles.fieldGroup, flex: 1 }}>
         <label style={styles.label}>{L.rulesLabel}</label>

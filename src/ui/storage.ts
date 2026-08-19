@@ -14,6 +14,10 @@ export function saveApiKey(key: string) {
   sendMessage({ type: 'save-storage', key: 'apiKey', value: key })
 }
 
+export function saveFileUrl(url: string) {
+  sendMessage({ type: 'save-storage', key: 'fileUrl', value: url })
+}
+
 export function saveLang(lang: Lang) {
   sendMessage({ type: 'save-storage', key: 'lang', value: lang })
 }

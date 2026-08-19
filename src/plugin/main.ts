@@ -58,11 +58,20 @@ function collectTextNodes(node: SceneNode, results: { id: string; text: string; 
 const STORAGE_KEYS = { rules: 'ux-editor-rules', apiKey: 'ux-editor-api-key', lang: 'ux-editor-lang' } as const
 const SCAN_OPTIONS_KEYS = { scope: 'ux-editor-scope', onlyVisible: 'ux-editor-only-visible' } as const
 
+// fileUrl is remembered per Figma file (keyed by fileKey), so switching files doesn't show a stale link.
+// Files that aren't saved to the cloud yet have no fileKey — in that case we neither read nor persist
+// a fileUrl, since there'd be no reliable way to tell such files apart.
+function fileUrlStorageKey(): string | null {
+  return figma.fileKey ? `ux-editor-file-url:${figma.fileKey}` : null
+}
+
 figma.ui.onmessage = async (msg: UIMessage) => {
   if (msg.type === 'load-storage') {
-    const [rules, apiKey, lang, scope, onlyVisible] = await Promise.all([
+    const fileUrlKey = fileUrlStorageKey()
+    const [rules, apiKey, fileUrl, lang, scope, onlyVisible] = await Promise.all([
       figma.clientStorage.getAsync(STORAGE_KEYS.rules),
       figma.clientStorage.getAsync(STORAGE_KEYS.apiKey),
+      fileUrlKey ? figma.clientStorage.getAsync(fileUrlKey) : undefined,
       figma.clientStorage.getAsync(STORAGE_KEYS.lang),
       figma.clientStorage.getAsync(SCAN_OPTIONS_KEYS.scope),
       figma.clientStorage.getAsync(SCAN_OPTIONS_KEYS.onlyVisible),
@@ -71,6 +80,7 @@ figma.ui.onmessage = async (msg: UIMessage) => {
       type: 'storage-data',
       rules: rules ?? '',
       apiKey: apiKey ?? '',
+      fileUrl: fileUrl ?? (figma.fileKey ? `https://www.figma.com/design/${figma.fileKey}` : ''),
       lang: lang === 'en' ? 'en' : 'ru',
       scope: scope === 'selection' ? 'selection' : 'page',
       onlyVisible: onlyVisible ?? true,
@@ -78,8 +88,12 @@ figma.ui.onmessage = async (msg: UIMessage) => {
   }
 
   if (msg.type === 'save-storage') {
-    const key = msg.key as keyof typeof STORAGE_KEYS
-    await figma.clientStorage.setAsync(STORAGE_KEYS[key], msg.value)
+    if (msg.key === 'fileUrl') {
+      const fileUrlKey = fileUrlStorageKey()
+      if (fileUrlKey) await figma.clientStorage.setAsync(fileUrlKey, msg.value)
+    } else {
+      await figma.clientStorage.setAsync(STORAGE_KEYS[msg.key], msg.value)
+    }
   }
 
   if (msg.type === 'save-scan-options') {

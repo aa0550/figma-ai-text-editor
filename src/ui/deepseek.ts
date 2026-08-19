@@ -1,12 +1,24 @@
 import type { TextNode, Suggestion } from '../shared/types'
+import type { Lang } from '../shared/i18n'
 
 const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions'
 const MODEL = 'deepseek-chat'
+
+const CONNECT_ERROR = {
+  ru: (msg: string) => `Не удалось связаться с DeepSeek API: ${msg}`,
+  en: (msg: string) => `Could not reach the DeepSeek API: ${msg}`,
+} as const
+
+const REASON_LANG = {
+  ru: 'на русском',
+  en: 'in English',
+} as const
 
 export async function checkTextsWithAI(
   nodes: TextNode[],
   rules: string,
   apiKey: string,
+  lang: Lang,
   onProgress: (done: number, total: number) => void,
   signal?: AbortSignal,
 ): Promise<Suggestion[]> {
@@ -16,7 +28,7 @@ export async function checkTextsWithAI(
   for (let i = 0; i < nodes.length; i += BATCH) {
     if (signal?.aborted) break
     const batch = nodes.slice(i, i + BATCH)
-    const batchResults = await checkBatch(batch, rules, apiKey, 0, signal)
+    const batchResults = await checkBatch(batch, rules, apiKey, lang, 0, signal)
     results.push(...batchResults)
     onProgress(Math.min(i + BATCH, nodes.length), nodes.length)
   }
@@ -29,7 +41,7 @@ function extractJson(raw: string): string {
   return fenced ? fenced[1] : raw
 }
 
-async function checkBatch(nodes: TextNode[], rules: string, apiKey: string, attempt = 0, signal?: AbortSignal): Promise<Suggestion[]> {
+async function checkBatch(nodes: TextNode[], rules: string, apiKey: string, lang: Lang, attempt = 0, signal?: AbortSignal): Promise<Suggestion[]> {
   const textsJson = JSON.stringify(
     nodes.map((n) => ({ id: n.id, text: n.text })),
     null,
@@ -53,7 +65,7 @@ ${textsJson}
     {
       "id": "<id из входных данных>",
       "suggested": "<исправленный текст>",
-      "reason": "<краткое объяснение на русском, 1 предложение, обязательно с указанием номера применённого правила из списка выше, например: «Слово заменено согласно правилу 3»>"
+      "reason": "<краткое объяснение ${REASON_LANG[lang]}, 1 предложение, обязательно с указанием номера применённого правила из списка выше, например: «Слово заменено согласно правилу 3»>"
     }
   ]
 }
@@ -79,9 +91,9 @@ ${textsJson}
     if (signal?.aborted) throw e
     if (attempt < 3) {
       await new Promise((r) => setTimeout(r, 3000))
-      return checkBatch(nodes, rules, apiKey, attempt + 1, signal)
+      return checkBatch(nodes, rules, apiKey, lang, attempt + 1, signal)
     }
-    throw new Error(`Не удалось связаться с DeepSeek API: ${e instanceof Error ? e.message : String(e)}`)
+    throw new Error(CONNECT_ERROR[lang](e instanceof Error ? e.message : String(e)))
   }
 
   if (!response.ok) {
@@ -90,7 +102,7 @@ ${textsJson}
       const retryAfter = Number(response.headers.get('retry-after'))
       const delaySec = retryAfter || Math.min(30, (attempt + 1) * 8)
       await new Promise((r) => setTimeout(r, delaySec * 1000))
-      return checkBatch(nodes, rules, apiKey, attempt + 1, signal)
+      return checkBatch(nodes, rules, apiKey, lang, attempt + 1, signal)
     }
     throw new Error(`DeepSeek API error ${response.status}: ${err}`)
   }

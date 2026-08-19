@@ -1,4 +1,5 @@
 import type { ScanScope } from '../shared/types'
+import type { Lang } from '../shared/i18n'
 import { sendMessage } from './usePluginBridge'
 
 export function requestStorage() {
@@ -11,6 +12,10 @@ export function saveRules(rules: string) {
 
 export function saveApiKey(key: string) {
   sendMessage({ type: 'save-storage', key: 'apiKey', value: key })
+}
+
+export function saveLang(lang: Lang) {
+  sendMessage({ type: 'save-storage', key: 'lang', value: lang })
 }
 
 export function saveScanOptions(scope: ScanScope, onlyVisible: boolean) {

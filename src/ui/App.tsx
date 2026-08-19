@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import type { Suggestion, TextNode, PluginMessage, ScanScope } from '../shared/types'
+import type { Lang, Strings } from '../shared/i18n'
+import { STRINGS } from '../shared/i18n'
 import { usePluginMessage, sendMessage, useNavigate } from './usePluginBridge'
 import { checkTextsWithAI } from './deepseek'
-import { requestStorage, saveRules, saveApiKey, saveScanOptions } from './storage'
+import { requestStorage, saveRules, saveApiKey, saveLang, saveScanOptions } from './storage'
 
 type Tab = 'scan' | 'results' | 'summary' | 'rules'
 type ScanState = 'idle' | 'scanning' | 'checking' | 'done' | 'error'
@@ -13,6 +15,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('scan')
   const [rules, setRules] = useState('')
   const [apiKey, setApiKey] = useState('')
+  const [lang, setLang] = useState<Lang>('ru')
   const [scanState, setScanState] = useState<ScanState>('idle')
   const [scope, setScope] = useState<ScanScope>('page')
   const [onlyVisible, setOnlyVisible] = useState(true)
@@ -20,8 +23,9 @@ export default function App() {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [errorMsg, setErrorMsg] = useState('')
   const navigate = useNavigate()
-  const dirty = useRef({ rules: false, apiKey: false, scanOptions: false })
+  const dirty = useRef({ rules: false, apiKey: false, lang: false, scanOptions: false })
   const abortRef = useRef<AbortController | null>(null)
+  const L = STRINGS[lang]
 
   useEffect(() => {
     requestStorage()
@@ -34,6 +38,7 @@ export default function App() {
     if (msg.type === 'storage-data') {
       if (!dirty.current.rules) setRules(msg.rules)
       if (!dirty.current.apiKey) setApiKey(msg.apiKey)
+      if (!dirty.current.lang) setLang(msg.lang)
       if (!dirty.current.scanOptions) {
         setScope(msg.scope)
         setOnlyVisible(msg.onlyVisible)
@@ -46,7 +51,7 @@ export default function App() {
   async function handleScanComplete(nodes: TextNode[]) {
     const nonEmpty = nodes.filter((n) => n.text.trim().length > 0)
     if (nonEmpty.length === 0) {
-      setErrorMsg('На странице нет текстов')
+      setErrorMsg(L.noTextsError)
       setScanState('error')
       return
     }
@@ -55,7 +60,7 @@ export default function App() {
     const controller = new AbortController()
     abortRef.current = controller
     try {
-      const results = await checkTextsWithAI(nonEmpty, rules, apiKey, (done, total) => {
+      const results = await checkTextsWithAI(nonEmpty, rules, apiKey, lang, (done, total) => {
         setProgress({ done, total })
       }, controller.signal)
       if (controller.signal.aborted) return
@@ -73,8 +78,8 @@ export default function App() {
   }
 
   function startScan() {
-    if (!apiKey.trim()) { setErrorMsg('Укажите API ключ DeepSeek'); setScanState('error'); return }
-    if (!rules.trim()) { setErrorMsg('Добавьте правила во вкладке «Настройки»'); setScanState('error'); return }
+    if (!apiKey.trim()) { setErrorMsg(L.noApiKeyError); setScanState('error'); return }
+    if (!rules.trim()) { setErrorMsg(L.noRulesError); setScanState('error'); return }
     setErrorMsg('')
     setScanState('scanning')
     setSuggestions([])
@@ -90,12 +95,12 @@ export default function App() {
   }
 
   function acceptChange(s: Suggestion) {
-    sendMessage({ type: 'apply-change', nodeId: s.nodeId, newText: s.suggested })
+    sendMessage({ type: 'apply-change', nodeId: s.nodeId, newText: s.suggested, lang })
     updateSuggestion(s.nodeId, { accepted: true, skipped: false })
   }
 
   function undoAccept(s: Suggestion) {
-    sendMessage({ type: 'apply-change', nodeId: s.nodeId, newText: s.original })
+    sendMessage({ type: 'apply-change', nodeId: s.nodeId, newText: s.original, lang })
     updateSuggestion(s.nodeId, { accepted: false })
   }
 
@@ -109,7 +114,7 @@ export default function App() {
 
   function acceptAll() {
     const pending = suggestions.filter((s) => !s.skipped)
-    sendMessage({ type: 'apply-all', changes: pending.map((s) => ({ nodeId: s.nodeId, newText: s.suggested })) })
+    sendMessage({ type: 'apply-all', changes: pending.map((s) => ({ nodeId: s.nodeId, newText: s.suggested })), lang })
     setSuggestions((prev) => prev.map((s) => s.skipped ? s : { ...s, accepted: true }))
   }
 
@@ -118,7 +123,7 @@ export default function App() {
     if (accepted.length === 0) return ''
     const lines = accepted.map((s, i) => {
       const link = `?node-id=${s.parentId.replace(/:/g, '-')}`
-      return `${i + 1}. ${s.reason}\nБыло: ${s.original}\nСтало: ${s.suggested}\n${link}`
+      return `${i + 1}. ${s.reason}\n${L.before}${s.original}\n${L.after}${s.suggested}\n${link}`
     })
     return lines.join('\n\n')
   }
@@ -133,7 +138,7 @@ export default function App() {
             style={{ ...styles.navBtn, ...(tab === t ? styles.navActive : {}) }}
             onClick={() => setTab(t)}
           >
-            {tabLabel(t)}
+            {tabLabel(t, L)}
           </button>
         ))}
       </nav>
@@ -141,6 +146,7 @@ export default function App() {
       <div style={styles.content}>
         {tab === 'scan' && (
           <ScanTab
+            L={L}
             state={scanState}
             progress={progress}
             error={errorMsg}
@@ -151,6 +157,7 @@ export default function App() {
         )}
         {tab === 'results' && (
           <ResultsTab
+            L={L}
             suggestions={suggestions}
             onNavigate={(s) => navigate(s.nodeId)}
             onAccept={acceptChange}
@@ -161,14 +168,17 @@ export default function App() {
           />
         )}
         {tab === 'summary' && (
-          <SummaryTab summary={buildSummary()} hasSuggestions={suggestions.length > 0} />
+          <SummaryTab L={L} summary={buildSummary()} hasSuggestions={suggestions.length > 0} />
         )}
         {tab === 'rules' && (
           <RulesTab
+            L={L}
             rules={rules}
             apiKey={apiKey}
+            lang={lang}
             onRulesChange={(v) => { dirty.current.rules = true; setRules(v); saveRules(v) }}
             onApiKeyChange={(v) => { dirty.current.apiKey = true; setApiKey(v); saveApiKey(v) }}
+            onLangChange={(v) => { dirty.current.lang = true; setLang(v); saveLang(v) }}
             scope={scope}
             onScopeChange={(v) => { dirty.current.scanOptions = true; setScope(v); saveScanOptions(v, onlyVisible) }}
             onlyVisible={onlyVisible}
@@ -180,23 +190,35 @@ export default function App() {
   )
 }
 
-function tabLabel(t: Tab) {
-  return { rules: 'Настройки', scan: 'Проверка', results: 'Результаты', summary: 'Саммари' }[t]
+function tabLabel(t: Tab, L: Strings) {
+  return { rules: L.navRules, scan: L.navScan, results: L.navResults, summary: L.navSummary }[t]
 }
 
-function RulesTab({ rules, apiKey, onRulesChange, onApiKeyChange, scope, onScopeChange, onlyVisible, onOnlyVisibleChange }: {
-  rules: string; apiKey: string
-  onRulesChange: (v: string) => void; onApiKeyChange: (v: string) => void
+function RulesTab({ L, rules, apiKey, lang, onRulesChange, onApiKeyChange, onLangChange, scope, onScopeChange, onlyVisible, onOnlyVisibleChange }: {
+  L: Strings
+  rules: string; apiKey: string; lang: Lang
+  onRulesChange: (v: string) => void; onApiKeyChange: (v: string) => void; onLangChange: (v: Lang) => void
   scope: ScanScope; onScopeChange: (v: ScanScope) => void
   onlyVisible: boolean; onOnlyVisibleChange: (v: boolean) => void
 }) {
   return (
     <div style={styles.section}>
       <div style={styles.fieldGroup}>
+        <label style={styles.label}>{L.languageLabel}</label>
+        <Select
+          value={lang}
+          onChange={onLangChange}
+          options={[
+            { value: 'ru', label: L.langRu },
+            { value: 'en', label: L.langEn },
+          ]}
+        />
+      </div>
+      <div style={styles.fieldGroup}>
         <div style={styles.fieldHeader}>
-          <label style={styles.label}>DeepSeek API Key</label>
+          <label style={styles.label}>{L.apiKeyLabel}</label>
           <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noreferrer" className="key-link" style={styles.link}>
-            Получить ключ
+            {L.getKey}
           </a>
         </div>
         <input
@@ -209,34 +231,34 @@ function RulesTab({ rules, apiKey, onRulesChange, onApiKeyChange, scope, onScope
       </div>
       <div style={styles.optionsBlock}>
         <div style={{ ...styles.fieldGroup, flex: 1 }}>
-          <label style={styles.label}>Область сканирования</label>
+          <label style={styles.label}>{L.scopeLabel}</label>
           <Select
             value={scope}
             onChange={onScopeChange}
             options={[
-              { value: 'page', label: 'Текущая страница' },
-              { value: 'selection', label: 'Только выделенное' },
+              { value: 'page', label: L.scopePage },
+              { value: 'selection', label: L.scopeSelection },
             ]}
           />
         </div>
         <div style={{ ...styles.fieldGroup, flex: 1 }}>
-          <label style={styles.label}>Видимость элементов</label>
+          <label style={styles.label}>{L.visibilityLabel}</label>
           <Select
             value={onlyVisible ? 'visible' : 'all'}
             onChange={(v) => onOnlyVisibleChange(v === 'visible')}
             options={[
-              { value: 'all', label: 'Все элементы' },
-              { value: 'visible', label: 'Только видимые' },
+              { value: 'all', label: L.visibilityAll },
+              { value: 'visible', label: L.visibilityVisible },
             ]}
           />
         </div>
       </div>
       <div style={{ ...styles.fieldGroup, flex: 1 }}>
-        <label style={styles.label}>Правила и Tone of Voice</label>
+        <label style={styles.label}>{L.rulesLabel}</label>
         <textarea
           value={rules}
           onChange={(e) => onRulesChange(e.target.value)}
-          placeholder="Опишите правила написания текстов: обращение к пользователю, пунктуация, стиль, запрещённые слова и т.д."
+          placeholder={L.rulesPlaceholder}
           style={styles.textareaGrow}
         />
       </div>
@@ -244,7 +266,8 @@ function RulesTab({ rules, apiKey, onRulesChange, onApiKeyChange, scope, onScope
   )
 }
 
-function ScanTab({ state, progress, error, onStart, onStop, onRetry }: {
+function ScanTab({ L, state, progress, error, onStart, onStop, onRetry }: {
+  L: Strings
   state: ScanState; progress: { done: number; total: number }
   error: string
   onStart: () => void; onStop: () => void; onRetry: () => void
@@ -252,26 +275,27 @@ function ScanTab({ state, progress, error, onStart, onStop, onRetry }: {
   return (
     <div style={{ ...styles.section, alignItems: 'center', justifyContent: 'center', height: '100%' }}>
       {(state === 'idle' || state === 'done') && (
-        <button className="btn-primary" style={styles.primary} onClick={onStart}>Проверить</button>
+        <button className="btn-primary" style={styles.primary} onClick={onStart}>{L.checkButton}</button>
       )}
       {state === 'scanning' && <Spinner />}
       {state === 'checking' && (
         <>
-          <Spinner label={`Проверка ${progress.done} / ${progress.total}`} labelStyle={{ ...styles.status, fontWeight: 500 }} />
-          <button className="btn-secondary" style={styles.secondary} onClick={onStop}>Остановить</button>
+          <Spinner label={L.checkingProgress(progress.done, progress.total)} labelStyle={{ ...styles.status, fontWeight: 500 }} />
+          <button className="btn-secondary" style={styles.secondary} onClick={onStop}>{L.stopButton}</button>
         </>
       )}
       {state === 'error' && (
         <>
           <p style={{ color: '#F24822', fontSize: 12, textAlign: 'center' }}>{error}</p>
-          <button className="btn-secondary" style={styles.secondary} onClick={onRetry}>Попробовать снова</button>
+          <button className="btn-secondary" style={styles.secondary} onClick={onRetry}>{L.retryButton}</button>
         </>
       )}
     </div>
   )
 }
 
-function ResultsTab({ suggestions, onNavigate, onAccept, onUndo, onSkip, onUndoSkip, onAcceptAll }: {
+function ResultsTab({ L, suggestions, onNavigate, onAccept, onUndo, onSkip, onUndoSkip, onAcceptAll }: {
+  L: Strings
   suggestions: Suggestion[]
   onNavigate: (s: Suggestion) => void
   onAccept: (s: Suggestion) => void
@@ -285,19 +309,20 @@ function ResultsTab({ suggestions, onNavigate, onAccept, onUndo, onSkip, onUndoS
 
   if (suggestions.length === 0) {
     return <div style={{ ...styles.section, padding: '0 16px', alignItems: 'center', justifyContent: 'center' }}>
-      <p style={{ ...styles.status, fontSize: 12, textAlign: 'center' }}>Нет предложений. Запустите проверку.</p>
+      <p style={{ ...styles.status, fontSize: 12, textAlign: 'center' }}>{L.noSuggestions}</p>
     </div>
   }
 
   return (
     <div style={styles.section}>
       <div style={styles.resultsHeader}>
-        <span style={{ ...styles.status, fontWeight: 500 }}>{pending.length} ожидают · {accepted.length} принято</span>
+        <span style={{ ...styles.status, fontWeight: 500 }}>{L.resultsHeader(pending.length, accepted.length)}</span>
       </div>
       <div style={styles.list}>
         {suggestions.map((s) => (
           <SuggestionCard
             key={s.nodeId}
+            L={L}
             suggestion={s}
             onNavigate={() => onNavigate(s)}
             onAccept={() => onAccept(s)}
@@ -307,7 +332,7 @@ function ResultsTab({ suggestions, onNavigate, onAccept, onUndo, onSkip, onUndoS
           />
         ))}
       </div>
-      <button className="btn-secondary" style={styles.secondary} onClick={onAcceptAll}>Принять все</button>
+      <button className="btn-secondary" style={styles.secondary} onClick={onAcceptAll}>{L.acceptAll}</button>
     </div>
   )
 }
@@ -329,7 +354,8 @@ function diffParts(a: string, b: string) {
   }
 }
 
-function SuggestionCard({ suggestion: s, onNavigate, onAccept, onUndo, onSkip, onUndoSkip }: {
+function SuggestionCard({ L, suggestion: s, onNavigate, onAccept, onUndo, onSkip, onUndoSkip }: {
+  L: Strings
   suggestion: Suggestion; onNavigate: () => void; onAccept: () => void; onUndo: () => void; onSkip: () => void; onUndoSkip: () => void
 }) {
   const isDone = s.accepted || s.skipped
@@ -341,26 +367,26 @@ function SuggestionCard({ suggestion: s, onNavigate, onAccept, onUndo, onSkip, o
         <span className="card-arrow" style={styles.navArrow}>→</span>
       </div>
       <div style={styles.diff}>
-        <p style={styles.diffLine}>Было: {prefix}<span style={{ textDecoration: 'line-through' }}>{oldMid}</span>{suffix}</p>
-        <p style={styles.diffLine}>Стало: {prefix}<strong>{newMid}</strong>{suffix}</p>
+        <p style={styles.diffLine}>{L.before}{prefix}<span style={{ textDecoration: 'line-through' }}>{oldMid}</span>{suffix}</p>
+        <p style={styles.diffLine}>{L.after}{prefix}<strong>{newMid}</strong>{suffix}</p>
         <p style={styles.reason}>{s.reason}</p>
       </div>
       {!isDone && (
         <div style={styles.cardActions}>
-          <button className="btn-accept" style={styles.acceptBtn} onClick={onAccept}>Принять</button>
-          <button className="btn-skip" style={styles.skipBtn} onClick={onSkip}>Пропустить</button>
+          <button className="btn-accept" style={styles.acceptBtn} onClick={onAccept}>{L.accept}</button>
+          <button className="btn-skip" style={styles.skipBtn} onClick={onSkip}>{L.skip}</button>
         </div>
       )}
       {s.accepted && (
         <div style={styles.doneRow}>
-          <span style={styles.statusDone}>Принято ✓</span>
-          <button className="btn-undo" style={styles.undoBtn} onClick={onUndo}>Отменить</button>
+          <span style={styles.statusDone}>{L.accepted}</span>
+          <button className="btn-undo" style={styles.undoBtn} onClick={onUndo}>{L.undo}</button>
         </div>
       )}
       {s.skipped && (
         <div style={styles.doneRow}>
-          <span style={styles.statusSkip}>Пропущено</span>
-          <button className="btn-undo" style={styles.undoBtn} onClick={onUndoSkip}>Отменить</button>
+          <span style={styles.statusSkip}>{L.skipped}</span>
+          <button className="btn-undo" style={styles.undoBtn} onClick={onUndoSkip}>{L.undo}</button>
         </div>
       )}
     </div>
@@ -379,7 +405,7 @@ function copyToClipboard(text: string) {
   document.body.removeChild(ta)
 }
 
-function SummaryTab({ summary, hasSuggestions }: { summary: string; hasSuggestions: boolean }) {
+function SummaryTab({ L, summary, hasSuggestions }: { L: Strings; summary: string; hasSuggestions: boolean }) {
   const [copied, setCopied] = useState(false)
 
   function copy() {
@@ -390,14 +416,14 @@ function SummaryTab({ summary, hasSuggestions }: { summary: string; hasSuggestio
 
   if (!summary) {
     return <div style={{ ...styles.section, padding: '0 16px', alignItems: 'center', justifyContent: 'center' }}>
-      <p style={{ ...styles.status, fontSize: 12, textAlign: 'center' }}>{hasSuggestions ? 'Нет принятых изменений' : 'Нет предложений. Запустите проверку.'}</p>
+      <p style={{ ...styles.status, fontSize: 12, textAlign: 'center' }}>{hasSuggestions ? L.noAcceptedChanges : L.noSuggestions}</p>
     </div>
   }
 
   return (
     <div style={styles.section}>
       <pre style={styles.summaryBox}>{summary}</pre>
-      <button className="btn-secondary" style={styles.secondary} onClick={copy}>{copied ? 'Скопировано!' : 'Копировать'}</button>
+      <button className="btn-secondary" style={styles.secondary} onClick={copy}>{copied ? L.copied : L.copy}</button>
     </div>
   )
 }

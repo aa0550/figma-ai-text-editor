@@ -1,6 +1,27 @@
 /// <reference types="@figma/plugin-typings" />
+import type { Lang } from '../shared/i18n'
+import type { UIMessage } from '../shared/types'
 
 figma.showUI(__html__, { width: 480, height: 640, title: 'AI Text Editor' })
+
+interface NotifyStrings {
+  unsupportedFont: string
+  appliedWithErrors: (failed: number) => string
+  appliedAll: string
+}
+
+const NOTIFY: Record<Lang, NotifyStrings> = {
+  ru: {
+    unsupportedFont: 'Не удалось применить изменение: неподдерживаемый шрифт',
+    appliedWithErrors: (failed: number) => `Применено с ошибками: ${failed} узлов пропущено`,
+    appliedAll: 'Все изменения применены ✓',
+  },
+  en: {
+    unsupportedFont: 'Failed to apply change: unsupported font',
+    appliedWithErrors: (failed: number) => `Applied with errors: ${failed} nodes skipped`,
+    appliedAll: 'All changes applied ✓',
+  },
+}
 
 function getParentFrame(node: BaseNode): BaseNode | null {
   let current: BaseNode | null = node.parent
@@ -34,14 +55,15 @@ function collectTextNodes(node: SceneNode, results: { id: string; text: string; 
   }
 }
 
-const STORAGE_KEYS = { rules: 'ux-editor-rules', apiKey: 'ux-editor-api-key' } as const
+const STORAGE_KEYS = { rules: 'ux-editor-rules', apiKey: 'ux-editor-api-key', lang: 'ux-editor-lang' } as const
 const SCAN_OPTIONS_KEYS = { scope: 'ux-editor-scope', onlyVisible: 'ux-editor-only-visible' } as const
 
-figma.ui.onmessage = async (msg) => {
+figma.ui.onmessage = async (msg: UIMessage) => {
   if (msg.type === 'load-storage') {
-    const [rules, apiKey, scope, onlyVisible] = await Promise.all([
+    const [rules, apiKey, lang, scope, onlyVisible] = await Promise.all([
       figma.clientStorage.getAsync(STORAGE_KEYS.rules),
       figma.clientStorage.getAsync(STORAGE_KEYS.apiKey),
+      figma.clientStorage.getAsync(STORAGE_KEYS.lang),
       figma.clientStorage.getAsync(SCAN_OPTIONS_KEYS.scope),
       figma.clientStorage.getAsync(SCAN_OPTIONS_KEYS.onlyVisible),
     ])
@@ -49,6 +71,7 @@ figma.ui.onmessage = async (msg) => {
       type: 'storage-data',
       rules: rules ?? '',
       apiKey: apiKey ?? '',
+      lang: lang === 'en' ? 'en' : 'ru',
       scope: scope === 'selection' ? 'selection' : 'page',
       onlyVisible: onlyVisible ?? true,
     })
@@ -88,7 +111,7 @@ figma.ui.onmessage = async (msg) => {
         await figma.loadFontAsync(node.fontName as FontName)
         node.characters = msg.newText
       } catch {
-        figma.notify('Не удалось применить изменение: неподдерживаемый шрифт', { error: true })
+        figma.notify(NOTIFY[msg.lang].unsupportedFont, { error: true })
       }
     }
   }
@@ -106,7 +129,8 @@ figma.ui.onmessage = async (msg) => {
         }
       }
     }
-    figma.notify(failed > 0 ? `Применено с ошибками: ${failed} узлов пропущено` : 'Все изменения применены ✓')
+    const t = NOTIFY[msg.lang]
+    figma.notify(failed > 0 ? t.appliedWithErrors(failed) : t.appliedAll)
   }
 
 }

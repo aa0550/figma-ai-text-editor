@@ -1,32 +1,40 @@
-# React + TypeScript + Vite
+# AI Text Editor — Figma-плагин
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Плагин для Figma, который проверяет тексты на странице (или в выделении) на соответствие вашим правилам tone of voice с помощью ИИ (DeepSeek) и предлагает точечные правки прямо в файле — с diff «было/стало», причиной каждой правки (со ссылкой на конкретное правило) и возможностью принять, пропустить или отменить каждое изменение.
 
-Currently, two official plugins are available:
+## Возможности
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Сканирование текстовых слоёв — на всей текущей странице или только в выделении, с опцией учитывать только видимые элементы.
+- Проверка через DeepSeek API по правилам, которые вы описываете в свободной форме во вкладке «Настройки».
+- Постраничный diff для каждой найденной правки, с указанием номера нарушенного правила.
+- Принять / пропустить / отменить — для каждой правки по отдельности, и «Принять все» одной кнопкой.
+- Вкладка «Саммари» — готовый текст со списком принятых правок и ссылками на нужный экран (`?node-id=...`) для вставки в адресную строку уже открытого файла Figma.
+- Интерфейс на русском и английском — переключается во вкладке «Настройки», меняет и язык ответов ИИ.
+- Настройки (правила, API-ключ, язык, область/видимость сканирования) сохраняются между запусками плагина.
 
-## React Compiler
+## Разработка
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev      # vite dev-сервер для UI (браузерная разработка интерфейса)
+npm run build    # tsc -b && сборка UI (dist/index.html) + сборка кода плагина (dist/main.js)
+npm run lint     # oxlint
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Локальный запуск в Figma: Figma Desktop → Plugins → Development → Import plugin from manifest… → выбрать `manifest.json` из корня проекта (после `npm run build`).
+
+## Структура
+
+- `src/plugin/main.ts` — код песочницы плагина (доступ к Figma API: сканирование узлов, применение правок, `clientStorage`).
+- `src/ui/` — React UI плагина (iframe), включая клиент DeepSeek API (`deepseek.ts`).
+- `src/shared/types.ts` — общие типы сообщений между UI и песочницей.
+- `src/shared/i18n.ts` — словарь интерфейса (ru/en).
+- `store/` — материалы для публикации в Figma Community (иконка, обложка, скриншоты).
+
+## Приватность и сеть
+
+Плагину для проверки текстов нужен собственный API-ключ DeepSeek (вводится пользователем во вкладке «Настройки» и хранится только локально через `figma.clientStorage`, никуда, кроме `api.deepseek.com`, не отправляется). Список разрешённых доменов задан в `manifest.json` → `networkAccess.allowedDomains`.
+
+## Публикация в Figma Community
+
+См. [`store/PUBLISHING.md`](store/PUBLISHING.md) — чек-лист и готовые тексты для формы публикации.

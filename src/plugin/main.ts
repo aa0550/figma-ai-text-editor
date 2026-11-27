@@ -81,7 +81,7 @@ figma.ui.onmessage = async (msg: UIMessage) => {
       rules: rules ?? '',
       apiKey: apiKey ?? '',
       fileUrl: fileUrl ?? (figma.fileKey ? `https://www.figma.com/design/${figma.fileKey}` : ''),
-      lang: lang === 'en' ? 'en' : 'ru',
+      lang: lang === 'ru' ? 'ru' : 'en',
       scope: scope === 'selection' ? 'selection' : 'page',
       onlyVisible: onlyVisible ?? true,
     })

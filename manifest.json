@@ -1,6 +1,6 @@
 {
   "name": "AI Text Editor",
-  "id": "ux-text-editor",
+  "id": "1673617289298506040",
   "api": "1.0.0",
   "main": "dist/main.js",
   "ui": "dist/index.html",
@@ -8,5 +8,6 @@
     "allowedDomains": ["https://api.deepseek.com", "*"],
     "reasoning": "Fetches user-provided .md rule files from arbitrary URLs (e.g. GitHub raw links) in addition to calling the DeepSeek API."
   },
-  "editorType": ["figma"]
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page"
 }

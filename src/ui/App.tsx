@@ -17,7 +17,7 @@ export default function App() {
   const [rules, setRules] = useState('')
   const [apiKey, setApiKey] = useState('')
   const [fileUrl, setFileUrl] = useState('')
-  const [lang, setLang] = useState<Lang>('ru')
+  const [lang, setLang] = useState<Lang>('en')
   const [scanState, setScanState] = useState<ScanState>('idle')
   const [scope, setScope] = useState<ScanScope>('page')
   const [onlyVisible, setOnlyVisible] = useState(true)
